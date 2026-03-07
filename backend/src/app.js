@@ -11,27 +11,31 @@ const categoryRoutes = require('./routes/categories');
 const app = express();
 
 // Middleware
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://expensetivity.vercel.app',       // ← hardcode as backup
+  process.env.FRONTEND_URL,                 // ← from Render env var
+].filter(Boolean);
+
 app.use(cors({
   origin: function (origin, callback) {
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      process.env.FRONTEND_URL,
-    ].filter(Boolean);
-
-    // Allow requests with no origin (mobile apps, Postman, curl)
+    // Allow requests with no origin (Postman, mobile, curl)
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS blocked: ${origin}`));
+      return callback(null, true);
     }
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200   // ← some browsers send 204 which can fail
 }));
+
+// Handle OPTIONS preflight explicitly for all routes
+app.options('*', cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 

@@ -10,11 +10,26 @@ import './ExpensesPage.css';
 const formatMMK = (amount) =>
   new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ' MMK';
 
+  // Add this hook above the component
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= breakpoint);
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth <= breakpoint);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, [breakpoint]);
+
+  return isMobile;
+}
 export default function ExpensesPage() {
   const {
     expenses, categories, pagination, summary, loading,
     fetchExpenses, fetchCategories, deleteExpense, filters, updateFilters
   } = useExpenses();
+
+  const isMobile = useIsMobile();
+
 
   const [view, setView] = useState(() => localStorage.getItem('expenseView') || 'table');
   const [showForm, setShowForm] = useState(false);
@@ -87,7 +102,7 @@ export default function ExpensesPage() {
         </div>
         <div className="expenses-actions">
           {/* View toggle */}
-          <div className="view-toggle">
+          {/* <div className="view-toggle">
             <button
               className={`view-btn ${view === 'table' ? 'view-btn-active' : ''}`}
               onClick={() => handleViewChange('table')}
@@ -104,7 +119,7 @@ export default function ExpensesPage() {
               <LayoutGrid size={16} />
               <span>Cards</span>
             </button>
-          </div>
+          </div> */}
           <button className="add-expense-btn" onClick={() => setShowForm(true)}>
             <Plus size={16} />
             Add Expense
@@ -183,8 +198,6 @@ export default function ExpensesPage() {
             </button>
           )}
         </div>
-      ) : view === 'table' ? (
-        <ExpenseTable expenses={expenses} onEdit={handleEdit} onDelete={handleDelete} />
       ) : (
         <ExpenseCards expenses={expenses} onEdit={handleEdit} onDelete={handleDelete} />
       )}

@@ -57,7 +57,7 @@ export default function ExpenseCards({ expenses, onEdit, onDelete }) {
               )}
               {expense.receipt?.url && (
                 <a
-                  href={`http://localhost:5000${expense.receipt.url}`}
+                  href={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${expense.receipt.url}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="card-receipt-link"

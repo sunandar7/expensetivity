@@ -1,6 +1,6 @@
-# 💸 ExpenseIQ — Myanmar Expense Tracker
+# 💸 Expensetivity — Myanmar Expense Tracker
 
-A full-stack expense tracking application built with React.js + Node.js, featuring MMK currency support, receipt uploads, and beautiful table/card views.
+A full-stack expense tracking application built with React.js + Node.js, featuring MMK currency support, receipt uploads, and beautiful card view.
 
 ---
 
@@ -9,7 +9,7 @@ A full-stack expense tracking application built with React.js + Node.js, featuri
 - 🔐 **User Auth** — Register/Login with JWT
 - 📊 **Dashboard** — Spending stats, pie chart by category, 6-month bar chart trend
 - 💸 **Expense Management** — Add, edit, delete expenses
-- 🗂️ **Table & Card Views** — Toggle between views, preference saved
+- 🗂️ **Card Views** — Show expenses in card view
 - 🏷️ **Custom Categories** — Default categories + create your own with emoji & color
 - 🔍 **Filter & Search** — By name, category, date range
 - 📎 **Receipt Upload** — Attach JPG, PNG, PDF receipts

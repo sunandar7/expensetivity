@@ -87,7 +87,7 @@ export default function ExpensesPage() {
         </div>
         <div className="expenses-actions">
           {/* View toggle */}
-          {/* <div className="view-toggle">
+          <div className="view-toggle">
             <button
               className={`view-btn ${view === 'table' ? 'view-btn-active' : ''}`}
               onClick={() => handleViewChange('table')}
@@ -104,7 +104,7 @@ export default function ExpensesPage() {
               <LayoutGrid size={16} />
               <span>Cards</span>
             </button>
-          </div> */}
+          </div>
           <button className="add-expense-btn" onClick={() => setShowForm(true)}>
             <Plus size={16} />
             Add Expense
@@ -183,7 +183,9 @@ export default function ExpensesPage() {
             </button>
           )}
         </div>
-      ) : (
+      ) : view === 'table' ? (
+        <ExpenseTable expenses={expenses} onEdit={handleEdit} onDelete={handleDelete} />
+      )  : (
         <ExpenseCards expenses={expenses} onEdit={handleEdit} onDelete={handleDelete} />
       )}
 

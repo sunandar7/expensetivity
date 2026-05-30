@@ -71,7 +71,7 @@ const PORT = process.env.PORT || 5000;
 
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/expense_tracker')
   .then(async () => {
-    console.log('✅ Connected to MongoDB');
+    console.log('Connected to MongoDB');
 
     // Seed default categories
     const Category = require('./models/Category');
@@ -95,13 +95,13 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/expense_t
         { upsert: true, new: true }
       );
     }
-    console.log('✅ Default categories seeded');
+    console.log('Default categories seeded');
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(`Server running on http://localhost:${PORT}`);
     });
   })
   .catch(err => {
-    console.error('❌ MongoDB connection error:', err);
+    console.error('MongoDB connection error:', err);
     process.exit(1);
   });

@@ -2,6 +2,8 @@ const { validationResult } = require('express-validator');
 const path = require('path');
 const fs = require('fs');
 const Expense = require('../models/Expense');
+const { isCloudinaryConfigured } = require('../config/cloudinary');
+const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary');
 
 // GET /api/expenses
 const getExpenses = async (req, res) => {
@@ -93,13 +95,37 @@ const createExpense = async (req, res) => {
     };
 
     if (req.file) {
-      expenseData.receipt = {
-        filename: req.file.filename,
-        originalName: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        url: `/uploads/${req.file.filename}`
-      };
+      if (isCloudinaryConfigured) {
+        try {
+          const cloudinaryResult = await uploadToCloudinary(req.file.path, 'expense-tracker');
+          expenseData.receipt = {
+            filename: req.file.filename,
+            originalName: req.file.originalname,
+            mimetype: req.file.mimetype,
+            size: req.file.size,
+            url: cloudinaryResult.url,
+            publicId: cloudinaryResult.publicId,
+            resourceType: cloudinaryResult.resourceType
+          };
+        } catch (uploadErr) {
+          console.error('Failed to upload to Cloudinary, falling back to local storage:', uploadErr);
+          expenseData.receipt = {
+            filename: req.file.filename,
+            originalName: req.file.originalname,
+            mimetype: req.file.mimetype,
+            size: req.file.size,
+            url: `/uploads/${req.file.filename}`
+          };
+        }
+      } else {
+        expenseData.receipt = {
+          filename: req.file.filename,
+          originalName: req.file.originalname,
+          mimetype: req.file.mimetype,
+          size: req.file.size,
+          url: `/uploads/${req.file.filename}`
+        };
+      }
     }
 
     const expense = await Expense.create(expenseData);
@@ -129,17 +155,44 @@ const updateExpense = async (req, res) => {
 
     if (req.file) {
       // Remove old receipt file if exists
-      if (expense.receipt?.filename) {
+      if (expense.receipt?.publicId) {
+        await deleteFromCloudinary(expense.receipt.publicId, expense.receipt.resourceType);
+      } else if (expense.receipt?.filename) {
         const oldPath = path.join(__dirname, '../../uploads', expense.receipt.filename);
         if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
       }
-      expense.receipt = {
-        filename: req.file.filename,
-        originalName: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        url: `/uploads/${req.file.filename}`
-      };
+
+      if (isCloudinaryConfigured) {
+        try {
+          const cloudinaryResult = await uploadToCloudinary(req.file.path, 'expense-tracker');
+          expense.receipt = {
+            filename: req.file.filename,
+            originalName: req.file.originalname,
+            mimetype: req.file.mimetype,
+            size: req.file.size,
+            url: cloudinaryResult.url,
+            publicId: cloudinaryResult.publicId,
+            resourceType: cloudinaryResult.resourceType
+          };
+        } catch (uploadErr) {
+          console.error('Failed to upload to Cloudinary on update, falling back to local:', uploadErr);
+          expense.receipt = {
+            filename: req.file.filename,
+            originalName: req.file.originalname,
+            mimetype: req.file.mimetype,
+            size: req.file.size,
+            url: `/uploads/${req.file.filename}`
+          };
+        }
+      } else {
+        expense.receipt = {
+          filename: req.file.filename,
+          originalName: req.file.originalname,
+          mimetype: req.file.mimetype,
+          size: req.file.size,
+          url: `/uploads/${req.file.filename}`
+        };
+      }
     }
 
     await expense.save();
@@ -158,7 +211,9 @@ const deleteExpense = async (req, res) => {
     if (!expense) return res.status(404).json({ message: 'Expense not found.' });
 
     // Remove receipt file
-    if (expense.receipt?.filename) {
+    if (expense.receipt?.publicId) {
+      await deleteFromCloudinary(expense.receipt.publicId, expense.receipt.resourceType);
+    } else if (expense.receipt?.filename) {
       const filePath = path.join(__dirname, '../../uploads', expense.receipt.filename);
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }

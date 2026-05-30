@@ -7,6 +7,14 @@ const formatMMK = (amount) =>
   new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ' MMK';
 
 export default function ExpenseTable({ expenses, onEdit, onDelete }) {
+  const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+
+  const getReceiptUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return `${apiBaseUrl}${url}`;
+  };
+
   return (
     <div className="table-wrapper">
       <table className="expense-table">
@@ -24,25 +32,29 @@ export default function ExpenseTable({ expenses, onEdit, onDelete }) {
         <tbody>
           {expenses.map((expense, i) => (
             <tr key={expense._id} style={{ animationDelay: `${i * 0.04}s` }} className="table-row">
-              <td>
+              <td className="expense-cell">
                 <span className="expense-name">{expense.name}</span>
               </td>
-              <td>
-                <div className="category-chip" style={{ borderColor: expense.category?.color + '44', color: expense.category?.color }}>
-                  <span>{expense.category?.icon}</span>
-                  <span>{expense.category?.name}</span>
-                </div>
+              <td className="category-cell">
+                {expense.category ? (
+                  <div className="category-chip" style={{ borderColor: expense.category.color + '44', color: expense.category.color }}>
+                    <span>{expense.category.icon}</span>
+                    <span>{expense.category.name}</span>
+                  </div>
+                ) : (
+                  <span className="no-category">—</span>
+                )}
               </td>
-              <td>
+              <td className="date-cell-wrap">
                 <span className="date-cell">{format(new Date(expense.date), 'MMM d, yyyy')}</span>
               </td>
-              <td>
-                <span className="note-cell">{expense.note || '—'}</span>
+              <td className="note-cell-wrap">
+                <span className="note-cell" title={expense.note}>{expense.note || '—'}</span>
               </td>
-              <td>
+              <td className="receipt-cell">
                 {expense.receipt?.url ? (
                   <a
-                    href={`http://localhost:5000${expense.receipt.url}`}
+                    href={getReceiptUrl(expense.receipt.url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="receipt-link"
@@ -54,10 +66,10 @@ export default function ExpenseTable({ expenses, onEdit, onDelete }) {
                   <span className="no-receipt">—</span>
                 )}
               </td>
-              <td className="amount-col">
+              <td className="amount-cell-wrap amount-col">
                 <span className="amount-cell">{formatMMK(expense.amount)}</span>
               </td>
-              <td className="actions-col">
+              <td className="actions-cell-wrap actions-col">
                 <div className="row-actions">
                   <button className="action-btn edit-btn" onClick={() => onEdit(expense)} title="Edit">
                     <Pencil size={14} />

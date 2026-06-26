@@ -9,6 +9,12 @@ const formatMMK = (amount) =>
 export default function ExpenseTable({ expenses, onEdit, onDelete }) {
   const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
+  const getReceiptUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return `${apiBaseUrl}${url}`;
+  };
+
   return (
     <div className="table-wrapper">
       <table className="expense-table">
@@ -48,7 +54,7 @@ export default function ExpenseTable({ expenses, onEdit, onDelete }) {
               <td className="receipt-cell">
                 {expense.receipt?.url ? (
                   <a
-                    href={`${apiBaseUrl}${expense.receipt.url}`}
+                    href={getReceiptUrl(expense.receipt.url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="receipt-link"

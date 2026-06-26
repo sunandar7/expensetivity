@@ -42,7 +42,9 @@ const expenseSchema = new mongoose.Schema({
     originalName: String,
     mimetype: String,
     size: Number,
-    url: String
+    url: String,
+    publicId: String,
+    resourceType: String
   }
 }, {
   timestamps: true

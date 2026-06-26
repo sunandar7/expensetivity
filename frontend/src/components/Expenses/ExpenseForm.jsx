@@ -21,8 +21,27 @@ export default function ExpenseForm({ expense, categories, onClose }) {
     note: expense?.note || '',
   });
 
+  const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+
+  const getReceiptUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return `${apiBaseUrl}${url}`;
+  };
+
+  const isImageFile = (fileUrl, mimeType) => {
+    if (mimeType) return mimeType.startsWith('image/');
+    return /\.(jpg|jpeg|png|webp|gif)$/i.test(fileUrl);
+  };
+
   const [receipt, setReceipt] = useState(null);
-  const [receiptPreview, setReceiptPreview] = useState(expense?.receipt?.url ? `http://localhost:5000${expense.receipt.url}` : null);
+  const [existingReceipt, setExistingReceipt] = useState(expense?.receipt || null);
+  const [receiptPreview, setReceiptPreview] = useState(() => {
+    if (expense?.receipt?.url && isImageFile(expense.receipt.url, expense.receipt.mimetype)) {
+      return getReceiptUrl(expense.receipt.url);
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(false);
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCat, setNewCat] = useState({ name: '', icon: '📌', color: '#AAB7B8' });
@@ -38,6 +57,7 @@ export default function ExpenseForm({ expense, categories, onClose }) {
       return;
     }
     setReceipt(file);
+    setExistingReceipt(null);
     if (file.type.startsWith('image/')) {
       setReceiptPreview(URL.createObjectURL(file));
     } else {
@@ -51,13 +71,19 @@ export default function ExpenseForm({ expense, categories, onClose }) {
     if (file) {
       if (file.size > 5 * 1024 * 1024) { toast.error('File must be less than 5MB'); return; }
       setReceipt(file);
-      if (file.type.startsWith('image/')) setReceiptPreview(URL.createObjectURL(file));
+      setExistingReceipt(null);
+      if (file.type.startsWith('image/')) {
+        setReceiptPreview(URL.createObjectURL(file));
+      } else {
+        setReceiptPreview(null);
+      }
     }
   };
 
   const removeReceipt = () => {
     setReceipt(null);
     setReceiptPreview(null);
+    setExistingReceipt(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -277,7 +303,7 @@ export default function ExpenseForm({ expense, categories, onClose }) {
             <div className="field field-full">
               <label>Receipt / Invoice <span className="optional">(optional)</span></label>
               <div
-                className={`upload-zone ${receipt || receiptPreview ? 'upload-has-file' : ''}`}
+                className={`upload-zone ${receipt || receiptPreview || existingReceipt ? 'upload-has-file' : ''}`}
                 onDrop={handleDrop}
                 onDragOver={e => e.preventDefault()}
                 onClick={() => fileInputRef.current?.click()}
@@ -296,6 +322,25 @@ export default function ExpenseForm({ expense, categories, onClose }) {
                     <button type="button" className="remove-receipt-inline" onClick={(e) => { e.stopPropagation(); removeReceipt(); }}>
                       <X size={14} />
                     </button>
+                  </div>
+                ) : existingReceipt ? (
+                  <div className="receipt-file">
+                    <span className="file-icon">{isImageFile(existingReceipt.url, existingReceipt.mimetype) ? '🖼️' : '📄'}</span>
+                    <span className="file-name">{existingReceipt.originalName || 'receipt.pdf'}</span>
+                    <div className="existing-file-actions">
+                      <a
+                        href={getReceiptUrl(existingReceipt.url)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="view-existing-link"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        View
+                      </a>
+                      <button type="button" className="remove-receipt-inline" onClick={(e) => { e.stopPropagation(); removeReceipt(); }}>
+                        <X size={14} />
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="upload-prompt">

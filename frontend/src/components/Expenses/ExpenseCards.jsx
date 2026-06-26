@@ -7,6 +7,14 @@ const formatMMK = (amount) =>
   new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ' MMK';
 
 export default function ExpenseCards({ expenses, onEdit, onDelete }) {
+  const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+
+  const getReceiptUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return `${apiBaseUrl}${url}`;
+  };
+
   return (
     <div className="cards-grid">
       {expenses.map((expense, i) => (
@@ -57,7 +65,7 @@ export default function ExpenseCards({ expenses, onEdit, onDelete }) {
               )}
               {expense.receipt?.url && (
                 <a
-                  href={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${expense.receipt.url}`}
+                  href={getReceiptUrl(expense.receipt.url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="card-receipt-link"

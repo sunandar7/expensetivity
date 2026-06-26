@@ -62,4 +62,10 @@ export const expenseAPI = {
   getStats: (params) => api.get('/expenses/stats/summary', { params }),
 };
 
+// ─── Budget ────────────────────────────────────────
+export const budgetAPI = {
+  getCurrent: (params) => api.get('/budget/current', { params }),
+  set: (data) => api.post('/budget', data),
+};
+
 export default api;

@@ -2,6 +2,46 @@ const { validationResult } = require('express-validator');
 const path = require('path');
 const fs = require('fs');
 const Expense = require('../models/Expense');
+const Budget = require('../models/Budget');
+
+const checkBudgetLimit = async (userId, targetDate) => {
+  const date = new Date(targetDate);
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear();
+
+  // Find budget for this month
+  let budget = await Budget.findOne({ userId, year, month });
+  let activeLimit = 0;
+  
+  if (budget) {
+    activeLimit = budget.amount;
+  } else {
+    // Carry over logic
+    const latestBudget = await Budget.findOne({ userId }).sort({ year: -1, month: -1 });
+    if (latestBudget) {
+      activeLimit = latestBudget.amount;
+    }
+  }
+
+  if (activeLimit <= 0) {
+    return { isOverBudget: false, isNearLimit: false, activeLimit: 0, totalSpent: 0 };
+  }
+
+  // Get total expenses for this month
+  const startOfMonth = new Date(year, month - 1, 1);
+  const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+
+  const expenses = await Expense.find({
+    userId,
+    date: { $gte: startOfMonth, $lte: endOfMonth }
+  });
+
+  const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const isOverBudget = totalSpent > activeLimit;
+  const isNearLimit = totalSpent >= (activeLimit * 0.8) && totalSpent <= activeLimit;
+
+  return { isOverBudget, isNearLimit, activeLimit, totalSpent };
+};
 
 // GET /api/expenses
 const getExpenses = async (req, res) => {
@@ -105,7 +145,13 @@ const createExpense = async (req, res) => {
     const expense = await Expense.create(expenseData);
     await expense.populate('category', 'name icon color');
 
-    res.status(201).json({ message: 'Expense added!', expense });
+    const budgetStatus = await checkBudgetLimit(req.userId, expense.date);
+
+    res.status(201).json({
+      message: 'Expense added!',
+      expense,
+      ...budgetStatus
+    });
   } catch (err) {
     console.error('Create expense error:', err);
     res.status(500).json({ message: 'Server error.' });
@@ -145,7 +191,13 @@ const updateExpense = async (req, res) => {
     await expense.save();
     await expense.populate('category', 'name icon color');
 
-    res.json({ message: 'Expense updated!', expense });
+    const budgetStatus = await checkBudgetLimit(req.userId, expense.date);
+
+    res.json({
+      message: 'Expense updated!',
+      expense,
+      ...budgetStatus
+    });
   } catch (err) {
     res.status(500).json({ message: 'Server error.' });
   }

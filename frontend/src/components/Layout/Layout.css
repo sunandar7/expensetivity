@@ -201,6 +201,7 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0;
 }
 
 .topbar {
@@ -323,7 +324,7 @@
 }
 
 /* ─── Responsive ──────────────────────────────── */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .sidebar {
     transform: translateX(-100%);
     width: 280px;

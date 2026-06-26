@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { expenseAPI, categoryAPI } from '../services/api';
+import { expenseAPI, categoryAPI, budgetAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
 const ExpenseContext = createContext(null);
@@ -12,6 +12,8 @@ export const ExpenseProvider = ({ children }) => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({ page: 1, limit: 20, sortBy: 'date', sortOrder: 'desc' });
+  const [budget, setBudget] = useState(null);
+  const [budgetLoading, setBudgetLoading] = useState(false);
 
   const fetchExpenses = useCallback(async (params = {}) => {
     setLoading(true);
@@ -37,23 +39,44 @@ export const ExpenseProvider = ({ children }) => {
     }
   }, []);
 
+  const fetchCurrentBudget = useCallback(async (params = {}) => {
+    setBudgetLoading(true);
+    try {
+      const res = await budgetAPI.getCurrent(params);
+      setBudget(res.data);
+    } catch (err) {
+      console.error('Fetch budget error:', err);
+    } finally {
+      setBudgetLoading(false);
+    }
+  }, []);
+
+  const updateBudgetSetting = useCallback(async (data) => {
+    const res = await budgetAPI.set(data);
+    await fetchCurrentBudget({ month: data.month, year: data.year });
+    return res.data.budget;
+  }, [fetchCurrentBudget]);
+
   const createExpense = useCallback(async (formData) => {
     const res = await expenseAPI.create(formData);
     await fetchExpenses();
-    return res.data.expense;
-  }, [fetchExpenses]);
+    await fetchCurrentBudget();
+    return res.data;
+  }, [fetchExpenses, fetchCurrentBudget]);
 
   const updateExpense = useCallback(async (id, formData) => {
     const res = await expenseAPI.update(id, formData);
     await fetchExpenses();
-    return res.data.expense;
-  }, [fetchExpenses]);
+    await fetchCurrentBudget();
+    return res.data;
+  }, [fetchExpenses, fetchCurrentBudget]);
 
   const deleteExpense = useCallback(async (id) => {
     await expenseAPI.delete(id);
     setExpenses(prev => prev.filter(e => e._id !== id));
     setSummary(prev => ({ ...prev, totalCount: prev.totalCount - 1 }));
-  }, []);
+    await fetchCurrentBudget();
+  }, [fetchCurrentBudget]);
 
   const createCategory = useCallback(async (data) => {
     const res = await categoryAPI.create(data);
@@ -82,6 +105,7 @@ export const ExpenseProvider = ({ children }) => {
   return (
     <ExpenseContext.Provider value={{
       expenses, categories, pagination, summary, stats, loading, filters,
+      budget, budgetLoading, fetchCurrentBudget, updateBudgetSetting,
       fetchExpenses, fetchCategories, createExpense, updateExpense, deleteExpense,
       createCategory, deleteCategory, fetchStats, updateFilters, setFilters
     }}>

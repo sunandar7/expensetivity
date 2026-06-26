@@ -93,11 +93,21 @@ export default function ExpenseForm({ expense, categories, onClose }) {
       if (receipt) formData.append('receipt', receipt);
 
       if (expense) {
-        await updateExpense(expense._id, formData);
+        const res = await updateExpense(expense._id, formData);
         toast.success('Expense updated!');
+        if (res?.isOverBudget) {
+          setTimeout(() => toast('Budget ထက်ပိုသုံးမိပြီ!', { icon: '⚠️', duration: 5000 }), 300);
+        } else if (res?.isNearLimit) {
+          setTimeout(() => toast('Budget ကုန်ခါနီးပြီ!', { icon: 'ℹ️', duration: 5000 }), 300);
+        }
       } else {
-        await createExpense(formData);
+        const res = await createExpense(formData);
         toast.success('Expense added!');
+        if (res?.isOverBudget) {
+          setTimeout(() => toast('Budget ထက်ပိုသုံးမိပြီ!', { icon: '⚠️', duration: 5000 }), 300);
+        } else if (res?.isNearLimit) {
+          setTimeout(() => toast('Budget ကုန်ခါနီးပြီ!', { icon: 'ℹ️', duration: 5000 }), 300);
+        }
       }
       onClose();
     } catch (err) {

@@ -118,16 +118,16 @@
 }
 
 .action-btn {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all var(--transition);
-  opacity: 0;
+  opacity: 0.65;
 }
 
 .table-row:hover .action-btn { opacity: 1; }
@@ -150,4 +150,142 @@
 .delete-btn:hover {
   background: rgba(255, 107, 107, 0.12);
   color: var(--accent-coral);
+}
+
+/* ==========================================
+   Responsive / Mobile Styles (< 768px)
+   ========================================== */
+@media (max-width: 768px) {
+  .table-wrapper {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    overflow: visible;
+    box-shadow: none;
+  }
+
+  .expense-table {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .expense-table thead {
+    display: none; /* Hide header */
+  }
+
+  .expense-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+  }
+
+  .table-row {
+    display: grid;
+    grid-template-areas:
+      "name amount"
+      "category amount"
+      "date receipt"
+      "note actions";
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+    transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+  }
+
+  .table-row:last-child {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .table-row:hover {
+    background: var(--bg-elevated);
+    border-color: var(--border-light);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .expense-table td {
+    padding: 0 !important;
+    border: none !important;
+    vertical-align: middle;
+  }
+
+  .expense-cell {
+    grid-area: name;
+  }
+
+  .expense-name {
+    font-size: 15px;
+    max-width: 100%;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .category-cell {
+    grid-area: category;
+    display: flex;
+    align-items: center;
+  }
+
+  .date-cell-wrap {
+    grid-area: date;
+    display: flex;
+    align-items: center;
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+
+  .note-cell-wrap {
+    grid-area: note;
+    display: flex;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    padding-top: 10px !important;
+    margin-top: 4px;
+  }
+
+  .note-cell {
+    max-width: 100%;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .receipt-cell {
+    grid-area: receipt;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    border-top: 1px solid var(--border);
+    padding-top: 10px !important;
+    margin-top: 4px;
+  }
+
+  .amount-cell-wrap {
+    grid-area: amount;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    align-self: center;
+  }
+
+  .amount-cell {
+    font-size: 16px;
+  }
+
+  .actions-cell-wrap {
+    grid-area: actions;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    align-self: center;
+  }
+
+  .action-btn {
+    opacity: 1 !important; /* Make sure actions are fully visible on touch screens */
+  }
 }

@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, Receipt, Tag, ArrowRight, Plus } from 'lucide-react';
+import { TrendingUp, Receipt, Tag, ArrowRight, Plus, Wallet, Edit3 } from 'lucide-react';
 import { useExpenses } from '../context/ExpenseContext';
 import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import BudgetModal from '../components/Budget/BudgetModal';
 import './Dashboard.css';
 
 const formatMMK = (amount) =>
@@ -14,14 +15,27 @@ const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { expenses, summary, stats, fetchExpenses, fetchCategories, fetchStats, loading } = useExpenses();
+  const {
+    expenses, summary, stats, budget,
+    fetchExpenses, fetchCategories, fetchStats, fetchCurrentBudget, loading
+  } = useExpenses();
   const now = new Date();
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
 
   useEffect(() => {
     fetchExpenses({ limit: 5, sortBy: 'date', sortOrder: 'desc' });
     fetchCategories();
     fetchStats({ year: now.getFullYear(), month: now.getMonth() + 1 });
+    fetchCurrentBudget({ year: now.getFullYear(), month: now.getMonth() + 1 });
   }, []);
+
+  const {
+    activeLimit = 0,
+    totalExpenses = 0,
+    remaining = 0,
+    isNearLimit = false,
+    isOverBudget = false
+  } = budget || {};
 
   const trendData = (stats?.trend || []).map(t => ({
     name: MONTH_NAMES[t._id.month - 1],
@@ -50,6 +64,58 @@ export default function Dashboard() {
 
       {/* Stat cards */}
       <div className="stat-grid">
+        {/* Budget Card */}
+        <div className="stat-card stat-card-budget">
+          <div className="stat-icon"><Wallet size={20} /></div>
+          <div className="stat-info">
+            <div className="budget-header-row">
+              <p className="stat-label">Budget ({MONTH_NAMES[now.getMonth()]})</p>
+              <button className="budget-edit-btn-inline" onClick={() => setShowBudgetModal(true)} title="Configure Budget">
+                <Edit3 size={12} />
+              </button>
+            </div>
+            <p className="stat-value">{activeLimit > 0 ? formatMMK(activeLimit) : 'Not Set'}</p>
+            {activeLimit > 0 ? (
+              <div className="budget-inline-progress">
+                <div className="progress-track">
+                  <div 
+                    className={`progress-fill ${isOverBudget ? 'bg-error' : isNearLimit ? 'bg-warning' : 'bg-success'}`}
+                    style={{ width: `${Math.min(100, (totalExpenses / activeLimit) * 100)}%` }}
+                  />
+                </div>
+                <div className="progress-desc">
+                  <span>{Math.min(100, Math.round((totalExpenses / activeLimit) * 100))}% used</span>
+                  <span className={remaining < 0 ? 'text-error font-semibold' : ''}>
+                    {remaining < 0 ? 'Over' : 'Left'}: {formatMMK(Math.abs(remaining))}
+                  </span>
+                </div>
+                {isOverBudget && (
+                  <div className="budget-status-alert alert-error animate-fade-in">
+                    ⚠️ Budget ထက်ပိုသုံးမိပြီ!
+                  </div>
+                )}
+                {isNearLimit && (
+                  <div className="budget-status-alert alert-warning animate-fade-in">
+                    ℹ️ Budget ကုန်ခါနီးပြီ!
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button className="budget-setup-btn" onClick={() => setShowBudgetModal(true)}>Set monthly budget</button>
+            )}
+          </div>
+        </div>
+
+        {/* This Month */}
+        <div className="stat-card stat-card-purple">
+          <div className="stat-icon"><Tag size={20} /></div>
+          <div className="stat-info">
+            <p className="stat-label">Spent This Month</p>
+            <p className="stat-value">{formatMMK(stats?.monthlyTotal || 0)}</p>
+          </div>
+        </div>
+
+        {/* Total Spent (All Time) */}
         <div className="stat-card stat-card-gold">
           <div className="stat-icon"><TrendingUp size={20} /></div>
           <div className="stat-info">
@@ -57,18 +123,13 @@ export default function Dashboard() {
             <p className="stat-value">{formatMMK(summary.totalAmount)}</p>
           </div>
         </div>
+
+        {/* Total Expenses */}
         <div className="stat-card stat-card-teal">
           <div className="stat-icon"><Receipt size={20} /></div>
           <div className="stat-info">
             <p className="stat-label">Total Expenses</p>
             <p className="stat-value">{summary.totalCount.toLocaleString()}</p>
-          </div>
-        </div>
-        <div className="stat-card stat-card-purple">
-          <div className="stat-icon"><Tag size={20} /></div>
-          <div className="stat-info">
-            <p className="stat-label">This Month</p>
-            <p className="stat-value">{formatMMK(stats?.monthlyTotal || 0)}</p>
           </div>
         </div>
       </div>
@@ -213,6 +274,15 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {showBudgetModal && (
+        <BudgetModal
+          initialAmount={activeLimit}
+          initialMonth={now.getMonth() + 1}
+          initialYear={now.getFullYear()}
+          onClose={() => setShowBudgetModal(false)}
+        />
+      )}
     </div>
   );
 }

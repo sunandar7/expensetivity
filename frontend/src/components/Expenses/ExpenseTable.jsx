@@ -3,8 +3,8 @@ import { format } from 'date-fns';
 import { Pencil, Trash2, FileText, ExternalLink } from 'lucide-react';
 import './ExpenseTable.css';
 
-const formatMMK = (amount) =>
-  new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ' MMK';
+const formatAmount = (amount, currency = 'MMK') =>
+  new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ` ${currency}`;
 
 export default function ExpenseTable({ expenses, onEdit, onDelete }) {
   const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
@@ -67,7 +67,7 @@ export default function ExpenseTable({ expenses, onEdit, onDelete }) {
                 )}
               </td>
               <td className="amount-cell-wrap amount-col">
-                <span className="amount-cell">{formatMMK(expense.amount)}</span>
+                <span className="amount-cell">{formatAmount(expense.amount, expense.currency)}</span>
               </td>
               <td className="actions-cell-wrap actions-col">
                 <div className="row-actions">

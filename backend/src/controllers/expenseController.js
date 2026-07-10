@@ -123,13 +123,14 @@ const createExpense = async (req, res) => {
       return res.status(400).json({ message: errors.array()[0].msg });
     }
 
-    const { name, category, amount, date, note } = req.body;
+    const { name, category, amount, date, note, currency } = req.body;
 
     const expenseData = {
       userId: req.userId,
       name,
       category,
       amount: parseFloat(amount),
+      currency: currency || 'MMK',
       date: date || new Date(),
       note
     };
@@ -190,11 +191,12 @@ const updateExpense = async (req, res) => {
     const expense = await Expense.findOne({ _id: req.params.id, userId: req.userId });
     if (!expense) return res.status(404).json({ message: 'Expense not found.' });
 
-    const { name, category, amount, date, note } = req.body;
+    const { name, category, amount, date, note, currency } = req.body;
     Object.assign(expense, {
       name: name || expense.name,
       category: category || expense.category,
       amount: amount !== undefined ? parseFloat(amount) : expense.amount,
+      currency: currency || expense.currency || 'MMK',
       date: date || expense.date,
       note: note !== undefined ? note : expense.note
     });

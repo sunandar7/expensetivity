@@ -17,6 +17,7 @@ router.post('/', upload.single('receipt'), [
   body('name').trim().notEmpty().withMessage('Expense name is required'),
   body('category').notEmpty().withMessage('Category is required'),
   body('amount').isFloat({ min: 0 }).withMessage('Amount must be a positive number'),
+  body('currency').optional().isIn(['USD', 'MMK', 'JPY', 'THB', 'KRW']).withMessage('Invalid currency'),
   body('date').optional().isISO8601().withMessage('Invalid date format')
 ], createExpense);
 

@@ -8,13 +8,14 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis
 import BudgetModal from '../components/Budget/BudgetModal';
 import './Dashboard.css';
 
-
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export default function Dashboard() {
   const { user } = useAuth();
   const formatMMK = (amount) =>
-    new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ` ${user?.baseCurrency}`;
+    new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ` ${user?.baseCurrency || 'MMK'}`;
+  const formatAmount = (amount, currency) =>
+    new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ` ${currency || user?.baseCurrency || 'MMK'}`;
   const {
     expenses, summary, stats, budget,
     fetchExpenses, fetchCategories, fetchStats, fetchCurrentBudget, loading
@@ -268,7 +269,7 @@ export default function Dashboard() {
                     <span>{format(new Date(expense.date), 'MMM d, yyyy')}</span>
                   </p>
                 </div>
-                <p className="recent-amount">{formatMMK(expense.amount)}</p>
+                <p className="recent-amount">{formatAmount(expense.amount, expense.currency)}</p>
               </div>
             ))}
           </div>

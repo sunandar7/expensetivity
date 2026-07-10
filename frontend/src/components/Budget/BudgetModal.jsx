@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useExpenses } from '../../context/ExpenseContext';
+import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import './BudgetModal.css';
 
@@ -27,6 +28,7 @@ export default function BudgetModal({ onClose, initialMonth, initialYear, initia
   const [year, setYear] = useState(initialYear || new Date().getFullYear());
   const [loading, setLoading] = useState(false);
 
+  const { user } = useAuth();
   // Generate last 2 years and next 2 years
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
@@ -72,7 +74,7 @@ export default function BudgetModal({ onClose, initialMonth, initialYear, initia
           <div className="form-grid">
             {/* Amount */}
             <div className="field field-full">
-              <label>Budget Amount (MMK) *</label>
+              <label>Budget Amount *</label>
               <div className="amount-input">
                 <input
                   name="amount"
@@ -85,11 +87,19 @@ export default function BudgetModal({ onClose, initialMonth, initialYear, initia
                   required
                   autoFocus
                 />
-                <span className="currency-badge">MMK</span>
+                <span className="currency-badge">{user?.baseCurrency}</span>
               </div>
               {amount && !isNaN(amount) && (
                 <p className="amount-formatted">
-                  {new Intl.NumberFormat('my-MM').format(parseFloat(amount))} Kyat
+                  {new Intl.NumberFormat('my-MM').format(parseFloat(amount))} {
+                    {
+                      MMK: 'MMK',
+                      USD: 'USD',
+                      THB: 'Baht',
+                      JPY: 'Yen',
+                      KRW: 'Won'
+                    }[user?.baseCurrency] || user?.baseCurrency || 'Kyat'
+                  }
                 </p>
               )}
             </div>

@@ -3,8 +3,8 @@ import { format } from 'date-fns';
 import { Pencil, Trash2, FileText, StickyNote, Calendar } from 'lucide-react';
 import './ExpenseCards.css';
 
-const formatMMK = (amount) =>
-  new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ' MMK';
+const formatAmount = (amount, currency = 'MMK') =>
+  new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ` ${currency}`;
 
 export default function ExpenseCards({ expenses, onEdit, onDelete }) {
   const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
@@ -49,7 +49,7 @@ export default function ExpenseCards({ expenses, onEdit, onDelete }) {
             </div>
 
             {/* Amount */}
-            <div className="card-amount">{formatMMK(expense.amount)}</div>
+            <div className="card-amount">{formatAmount(expense.amount, expense.currency)}</div>
 
             {/* Meta */}
             <div className="card-meta">

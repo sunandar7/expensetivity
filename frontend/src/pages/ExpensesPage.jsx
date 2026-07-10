@@ -5,12 +5,14 @@ import ExpenseForm from '../components/Expenses/ExpenseForm';
 import ExpenseTable from '../components/Expenses/ExpenseTable';
 import ExpenseCards from '../components/Expenses/ExpenseCards';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 import './ExpensesPage.css';
 
-const formatMMK = (amount) =>
-  new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ' MMK';
-
 export default function ExpensesPage() {
+  const { user } = useAuth();
+  const formatMMK = (amount) =>
+    new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ` ${user?.baseCurrency || 'MMK'}`;
+
   const {
     expenses, categories, pagination, summary, loading,
     fetchExpenses, fetchCategories, deleteExpense, filters, updateFilters

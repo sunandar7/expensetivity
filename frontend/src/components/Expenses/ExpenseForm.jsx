@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Upload, Trash2, Plus, ChevronDown } from 'lucide-react';
 import { useExpenses } from '../../context/ExpenseContext';
+import { useAuth } from '../../context/AuthContext';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import './ExpenseForm.css';
@@ -11,12 +12,14 @@ const COLOR_OPTIONS = ['#FF6B6B', '#4ECDC4', '#FF8FB1', '#95D2B3', '#F7DC6F', '#
 
 export default function ExpenseForm({ expense, categories, onClose }) {
   const { createExpense, updateExpense, createCategory } = useExpenses();
+  const { user } = useAuth();
   const fileInputRef = useRef();
 
   const [form, setForm] = useState({
     name: expense?.name || '',
     category: expense?.category?._id || '',
     amount: expense?.amount || '',
+    currency: expense?.currency || user?.baseCurrency || 'MMK',
     date: expense?.date ? format(new Date(expense.date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
     note: expense?.note || '',
   });
@@ -175,7 +178,7 @@ export default function ExpenseForm({ expense, categories, onClose }) {
 
             {/* Amount */}
             <div className="field">
-              <label>Amount (MMK) *</label>
+              <label>Amount *</label>
               <div className="amount-input">
                 <input
                   name="amount"
@@ -187,11 +190,31 @@ export default function ExpenseForm({ expense, categories, onClose }) {
                   onChange={handleChange}
                   required
                 />
-                <span className="currency-badge">MMK</span>
+                <select
+                  name="currency"
+                  value={form.currency}
+                  onChange={handleChange}
+                  className="currency-select"
+                  required
+                >
+                  <option value="MMK">MMK</option>
+                  <option value="USD">USD</option>
+                  <option value="THB">THB</option>
+                  <option value="JPY">JPY</option>
+                  <option value="KRW">KRW</option>
+                </select>
               </div>
               {form.amount && !isNaN(form.amount) && (
                 <p className="amount-formatted">
-                  {new Intl.NumberFormat('my-MM').format(parseFloat(form.amount))} Kyat
+                  {new Intl.NumberFormat('my-MM').format(parseFloat(form.amount))} {
+                    {
+                      MMK: 'MMK',
+                      USD: 'USD',
+                      THB: 'Baht',
+                      JPY: 'Yen',
+                      KRW: 'Won'
+                    }[form.currency] || form.currency
+                  }
                 </p>
               )}
             </div>

@@ -25,7 +25,7 @@ const expenseSchema = new mongoose.Schema({
   },
   currency: {
     type: String,
-    default: 'MMK'
+    required: [true, 'Currency is required']
   },
   date: {
     type: Date,

@@ -7,7 +7,8 @@ const auth = require('../middleware/auth');
 router.post('/register', [
   body('name').trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
   body('email').isEmail().normalizeEmail().withMessage('Invalid email address'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('baseCurrency').optional().isIn(['USD', 'MMK', 'JPY', 'THB', 'KRW']).withMessage('Invalid base currency')
 ], register);
 
 router.post('/login', [

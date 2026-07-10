@@ -18,14 +18,14 @@ const register = async (req, res) => {
       return res.status(400).json({ message: errors.array()[0].msg, errors: errors.array() });
     }
 
-    const { name, email, password } = req.body;
+    const { name, email, password, baseCurrency } = req.body;
 
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return res.status(409).json({ message: 'An account with this email already exists.' });
     }
 
-    const user = await User.create({ name, email, password });
+    const user = await User.create({ name, email, password, baseCurrency });
     const token = generateToken(user._id);
 
     res.status(201).json({

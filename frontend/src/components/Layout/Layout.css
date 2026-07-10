@@ -237,6 +237,25 @@
   margin-left: auto;
 }
 
+.theme-toggle-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+}
+
+.theme-toggle-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--accent-gold);
+  border-color: var(--accent-gold);
+}
+
 .user-dropdown {
   position: relative;
   display: flex;

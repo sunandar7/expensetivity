@@ -8,13 +8,13 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis
 import BudgetModal from '../components/Budget/BudgetModal';
 import './Dashboard.css';
 
-const formatMMK = (amount) =>
-  new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ' MMK';
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const formatMMK = (amount) =>
+    new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ` ${user?.baseCurrency}`;
   const {
     expenses, summary, stats, budget,
     fetchExpenses, fetchCategories, fetchStats, fetchCurrentBudget, loading
@@ -78,7 +78,7 @@ export default function Dashboard() {
             {activeLimit > 0 ? (
               <div className="budget-inline-progress">
                 <div className="progress-track">
-                  <div 
+                  <div
                     className={`progress-fill ${isOverBudget ? 'bg-error' : isNearLimit ? 'bg-warning' : 'bg-success'}`}
                     style={{ width: `${Math.min(100, (totalExpenses / activeLimit) * 100)}%` }}
                   />

@@ -8,13 +8,13 @@ import './AuthPages.css';
 export default function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '', baseCurrency: 'MMK' });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.password) {
+    if (!form.name || !form.email || !form.password || !form.baseCurrency) {
       toast.error('Please fill in all fields');
       return;
     }
@@ -28,7 +28,7 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      await register(form.name, form.email, form.password);
+      await register(form.name, form.email, form.password, form.baseCurrency);
       toast.success('Account created! Welcome aboard!');
       navigate('/dashboard');
     } catch (err) {
@@ -63,7 +63,7 @@ export default function RegisterPage() {
             <label>Full name</label>
             <input
               type="text"
-              placeholder="Ko Aung"
+              placeholder="your name"
               value={form.name}
               onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
               autoComplete="name"
@@ -108,6 +108,20 @@ export default function RegisterPage() {
                 onChange={e => setForm(p => ({ ...p, confirmPassword: e.target.value }))}
                 required
               />
+            </div>
+            <div className="form-group">
+              <label>Base Currency</label>
+              <select 
+                value={form.baseCurrency}
+                onChange={e => setForm(p => ({ ...p, baseCurrency: e.target.value }))}
+                required
+              >
+                <option value="MMK">MMK</option>
+                <option value="USD">USD</option>
+                <option value="THB">THB</option>
+                <option value="JPY">JPY</option>
+                <option value="KRW">KRW</option>
+              </select>
             </div>
           </div>
 

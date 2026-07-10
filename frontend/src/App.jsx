@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ExpenseProvider } from './context/ExpenseContext';
+import { ThemeProvider } from './context/ThemeContext';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard';
@@ -62,27 +63,29 @@ export default function App() {
   return (
     <>
       {!splashDone && <SplashScreen onFinish={handleSplashFinish} />}
-      <AuthProvider>
-        <ExpenseProvider>
-          <BrowserRouter>
-            <AppRoutes />
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                style: {
-                  background: 'var(--bg-elevated)',
-                  color: 'var(--text-primary)',
-                  border: '1px solid var(--border)',
-                  fontFamily: 'var(--font-body)',
-                  fontSize: '14px',
-                },
-                success: { iconTheme: { primary: '#4ade80', secondary: 'var(--bg-elevated)' } },
-                error: { iconTheme: { primary: '#f87171', secondary: 'var(--bg-elevated)' } },
-              }}
-            />
-          </BrowserRouter>
-        </ExpenseProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ExpenseProvider>
+            <BrowserRouter>
+              <AppRoutes />
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  style: {
+                    background: 'var(--bg-elevated)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border)',
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '14px',
+                  },
+                  success: { iconTheme: { primary: '#4ade80', secondary: 'var(--bg-elevated)' } },
+                  error: { iconTheme: { primary: '#f87171', secondary: 'var(--bg-elevated)' } },
+                }}
+              />
+            </BrowserRouter>
+          </ExpenseProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </>
   );
 }

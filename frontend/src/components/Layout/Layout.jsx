@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Receipt, LogOut, TrendingDown,
-  Menu, X, User, ChevronDown, Info
+  Menu, X, User, ChevronDown, Info, Sun, Moon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import toast from 'react-hot-toast';
 import './Layout.css';
 
 export default function Layout() {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -88,6 +90,9 @@ export default function Layout() {
           </button>
 
           <div className="topbar-right">
+            <button className="theme-toggle-btn" onClick={toggleTheme} title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>
+              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
             <div className="user-dropdown" onClick={() => setUserMenuOpen(!userMenuOpen)}>
               <div className="topbar-avatar">{user?.name?.charAt(0).toUpperCase()}</div>
               <span className="topbar-username">{user?.name}</span>

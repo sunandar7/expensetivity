@@ -26,6 +26,11 @@ const userSchema = new mongoose.Schema({
   avatar: {
     type: String,
     default: null
+  },
+  baseCurrency: {
+    type: String,
+    default: 'MMK',
+    enum: ['USD', 'MMK', 'JPY', 'THB', 'KRW']
   }
 }, {
   timestamps: true

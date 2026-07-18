@@ -27,6 +27,17 @@ const expenseSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Currency is required']
   },
+  exchangeRateUsed: {
+    type: Number,
+    required: [true, 'Exchange rate is required'],
+    default: 1 // if Currency and user base currency are same, default is 1
+  },
+  baseAmount: {
+    type: Number,
+    required: [true, 'Base amount is required'],
+    min: [0, 'Base amount cannot be negative']
+    // The calculated amount based on user's base currency (eg: MMK) 
+  },
   date: {
     type: Date,
     required: [true, 'Date is required'],

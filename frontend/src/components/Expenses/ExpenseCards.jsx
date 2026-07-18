@@ -1,12 +1,14 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { Pencil, Trash2, FileText, StickyNote, Calendar } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import './ExpenseCards.css';
 
 const formatAmount = (amount, currency = 'MMK') =>
   new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ` ${currency}`;
 
 export default function ExpenseCards({ expenses, onEdit, onDelete }) {
+  const { user } = useAuth();
   const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
   const getReceiptUrl = (url) => {
@@ -49,7 +51,14 @@ export default function ExpenseCards({ expenses, onEdit, onDelete }) {
             </div>
 
             {/* Amount */}
-            <div className="card-amount">{formatAmount(expense.amount, expense.currency)}</div>
+            <div className="card-amount">
+              <div>{formatAmount(expense.amount, expense.currency)}</div>
+              {expense.currency !== user?.baseCurrency && expense.baseAmount !== undefined && (
+                <div className="card-amount-converted" style={{ fontSize: '0.82em', opacity: 0.75, marginTop: '2px', fontWeight: 'normal' }}>
+                  ({formatAmount(expense.baseAmount, user?.baseCurrency || 'MMK')})
+                </div>
+              )}
+            </div>
 
             {/* Meta */}
             <div className="card-meta">

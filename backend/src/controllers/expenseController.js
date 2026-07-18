@@ -5,6 +5,7 @@ const Expense = require('../models/Expense');
 const Budget = require('../models/Budget');
 const { isCloudinaryConfigured } = require('../config/cloudinary');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary');
+const { convertAmount } = require('../utils/exchangeRate');
 
 const checkBudgetLimit = async (userId, targetDate) => {
   const date = new Date(targetDate);
@@ -38,7 +39,7 @@ const checkBudgetLimit = async (userId, targetDate) => {
     date: { $gte: startOfMonth, $lte: endOfMonth }
   });
 
-  const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalSpent = expenses.reduce((sum, e) => sum + (e.baseAmount !== undefined ? e.baseAmount : e.amount), 0);
   const isOverBudget = totalSpent > activeLimit;
   const isNearLimit = totalSpent >= (activeLimit * 0.8) && totalSpent <= activeLimit;
 
@@ -82,7 +83,7 @@ const getExpenses = async (req, res) => {
 
     // Summary stats
     const allExpenses = await Expense.find({ userId: req.userId });
-    const totalAmount = allExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalAmount = allExpenses.reduce((sum, e) => sum + (e.baseAmount !== undefined ? e.baseAmount : e.amount), 0);
 
     res.json({
       expenses,
@@ -125,12 +126,18 @@ const createExpense = async (req, res) => {
 
     const { name, category, amount, date, note, currency } = req.body;
 
+    const userBaseCurrency = (req.user?.baseCurrency || 'MMK').toUpperCase();
+    const expenseCurrency = (currency || 'MMK').toUpperCase();
+    const { exchangeRateUsed, baseAmount } = await convertAmount(parseFloat(amount), expenseCurrency, userBaseCurrency);
+
     const expenseData = {
       userId: req.userId,
       name,
       category,
       amount: parseFloat(amount),
-      currency: currency || 'MMK',
+      currency: expenseCurrency,
+      exchangeRateUsed,
+      baseAmount,
       date: date || new Date(),
       note
     };
@@ -192,11 +199,20 @@ const updateExpense = async (req, res) => {
     if (!expense) return res.status(404).json({ message: 'Expense not found.' });
 
     const { name, category, amount, date, note, currency } = req.body;
+
+    const updatedAmount = amount !== undefined ? parseFloat(amount) : expense.amount;
+    const updatedCurrency = (currency || expense.currency || 'MMK').toUpperCase();
+    const userBaseCurrency = (req.user?.baseCurrency || 'MMK').toUpperCase();
+
+    const { exchangeRateUsed, baseAmount } = await convertAmount(updatedAmount, updatedCurrency, userBaseCurrency);
+
     Object.assign(expense, {
       name: name || expense.name,
       category: category || expense.category,
-      amount: amount !== undefined ? parseFloat(amount) : expense.amount,
-      currency: currency || expense.currency || 'MMK',
+      amount: updatedAmount,
+      currency: updatedCurrency,
+      exchangeRateUsed,
+      baseAmount,
       date: date || expense.date,
       note: note !== undefined ? note : expense.note
     });
@@ -292,7 +308,7 @@ const getStats = async (req, res) => {
 
     const byCategory = await Expense.aggregate([
       { $match: { userId: req.userId, date: { $gte: startOfMonth, $lte: endOfMonth } } },
-      { $group: { _id: '$category', total: { $sum: '$amount' }, count: { $sum: 1 } } },
+      { $group: { _id: '$category', total: { $sum: { $ifNull: ['$baseAmount', '$amount'] } }, count: { $sum: 1 } } },
       { $lookup: { from: 'categories', localField: '_id', foreignField: '_id', as: 'category' } },
       { $unwind: '$category' },
       { $project: { name: '$category.name', icon: '$category.icon', color: '$category.color', total: 1, count: 1 } },
@@ -312,7 +328,7 @@ const getStats = async (req, res) => {
       {
         $group: {
           _id: { year: { $year: '$date' }, month: { $month: '$date' } },
-          total: { $sum: '$amount' },
+          total: { $sum: { $ifNull: ['$baseAmount', '$amount'] } },
           count: { $sum: 1 }
         }
       },

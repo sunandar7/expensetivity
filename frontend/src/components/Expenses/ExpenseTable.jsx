@@ -1,12 +1,14 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { Pencil, Trash2, FileText, ExternalLink } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import './ExpenseTable.css';
 
 const formatAmount = (amount, currency = 'MMK') =>
   new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ` ${currency}`;
 
 export default function ExpenseTable({ expenses, onEdit, onDelete }) {
+  const { user } = useAuth();
   const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
   const getReceiptUrl = (url) => {
@@ -68,6 +70,11 @@ export default function ExpenseTable({ expenses, onEdit, onDelete }) {
               </td>
               <td className="amount-cell-wrap amount-col">
                 <span className="amount-cell">{formatAmount(expense.amount, expense.currency)}</span>
+                {expense.currency !== user?.baseCurrency && expense.baseAmount !== undefined && (
+                  <div className="amount-converted" style={{ fontSize: '0.8em', opacity: 0.75, marginTop: '2px' }}>
+                    ({formatAmount(expense.baseAmount, user?.baseCurrency || 'MMK')})
+                  </div>
+                )}
               </td>
               <td className="actions-cell-wrap actions-col">
                 <div className="row-actions">

@@ -99,6 +99,14 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/expense_t
     }
     console.log('Default categories seeded');
 
+    // Initialize daily exchange rate scheduler
+    const { initCronJobs } = require('./utils/cron');
+    initCronJobs();
+
+    // Migrate existing expenses to populate baseAmount and exchangeRateUsed if missing
+    const { migrateExistingExpenses } = require('./utils/exchangeRate');
+    await migrateExistingExpenses();
+
     app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });

@@ -10,7 +10,7 @@ const getBudget = async (req, res) => {
     // Find budget for this month
     let budget = await Budget.findOne({ userId: req.userId, year, month });
     let activeLimit = 0;
-    
+
     if (budget) {
       activeLimit = budget.amount;
     } else {
@@ -30,7 +30,7 @@ const getBudget = async (req, res) => {
       date: { $gte: startOfMonth, $lte: endOfMonth }
     });
 
-    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalExpenses = expenses.reduce((sum, e) => sum + (e.baseAmount !== undefined ? e.baseAmount : e.amount), 0);
     const remaining = activeLimit - totalExpenses;
     const isOverBudget = activeLimit > 0 && totalExpenses > activeLimit;
     const isNearLimit = activeLimit > 0 && totalExpenses >= (activeLimit * 0.8) && totalExpenses <= activeLimit;

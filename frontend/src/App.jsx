@@ -10,6 +10,7 @@ import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard';
 import ExpensesPage from './pages/ExpensesPage';
 import AboutPage from './pages/AboutPage';
+import WalletPage from './pages/WalletPage';
 import Layout from './components/Layout/Layout';
 
 const ProtectedRoute = ({ children }) => {
@@ -50,6 +51,7 @@ function AppRoutes() {
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="expenses" element={<ExpensesPage />} />
+        <Route path="wallet" element={<WalletPage />} />
         <Route path="about" element={<AboutPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

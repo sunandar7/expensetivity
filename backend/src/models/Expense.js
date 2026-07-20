@@ -27,6 +27,11 @@ const expenseSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Currency is required']
   },
+  walletId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Wallet',
+    index: true
+  },
   exchangeRateUsed: {
     type: Number,
     required: [true, 'Exchange rate is required'],
@@ -64,5 +69,6 @@ const expenseSchema = new mongoose.Schema({
 // Index for efficient querying
 expenseSchema.index({ userId: 1, date: -1 });
 expenseSchema.index({ userId: 1, category: 1 });
+expenseSchema.index({ userId: 1, walletId: 1 });
 
 module.exports = mongoose.model('Expense', expenseSchema);

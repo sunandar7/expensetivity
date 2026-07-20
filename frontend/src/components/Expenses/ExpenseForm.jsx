@@ -22,6 +22,7 @@ export default function ExpenseForm({ expense, categories, onClose }) {
     currency: expense?.currency || user?.baseCurrency || 'MMK',
     date: expense?.date ? format(new Date(expense.date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
     note: expense?.note || '',
+    walletId: expense?.walletId || '',
   });
 
   const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
@@ -49,6 +50,20 @@ export default function ExpenseForm({ expense, categories, onClose }) {
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCat, setNewCat] = useState({ name: '', icon: '📌', color: '#AAB7B8' });
   const [creatingCat, setCreatingCat] = useState(false);
+  const [wallets, setWallets] = useState([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('wallets');
+    if (saved) {
+      setWallets(JSON.parse(saved));
+    } else {
+      setWallets([
+        { id: 'w-1', name: 'KBZ Bank', balance: 750000, currency: 'MMK' },
+        { id: 'w-2', name: 'Cash Wallet', balance: 120000, currency: 'MMK' },
+        { id: 'w-3', name: 'USD Savings Card', balance: 2500, currency: 'USD' }
+      ]);
+    }
+  }, []);
 
   const handleChange = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
@@ -308,6 +323,23 @@ export default function ExpenseForm({ expense, categories, onClose }) {
                 onChange={handleChange}
                 required
               />
+            </div>
+
+            {/* Wallet */}
+            <div className="field">
+              <label>Wallet <span className="optional">(optional)</span></label>
+              <select
+                name="walletId"
+                value={form.walletId}
+                onChange={handleChange}
+              >
+                <option value="">Select wallet...</option>
+                {wallets.map(w => (
+                  <option key={w.id} value={w.id}>
+                    {w.name} ({new Intl.NumberFormat('my-MM').format(w.balance)} {w.currency})
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Note */}

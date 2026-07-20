@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Receipt, LogOut, TrendingDown,
-  Menu, X, User, ChevronDown, Info, Sun, Moon
+  Menu, X, User, ChevronDown, Info, Sun, Moon, Wallet
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -25,6 +25,7 @@ export default function Layout() {
   const navItems = [
     { to: '/dashboard', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
     { to: '/expenses', icon: <Receipt size={18} />, label: 'Expenses' },
+    { to: '/wallet', icon: <Wallet size={18} />, label: 'Wallet' },
     { to: '/about', icon: <Info size={18} />, label: 'About Us' }
   ];
 

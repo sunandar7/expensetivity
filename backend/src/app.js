@@ -8,6 +8,7 @@ const authRoutes = require('./routes/auth');
 const expenseRoutes = require('./routes/expenses');
 const categoryRoutes = require('./routes/categories');
 const budgetRoutes = require('./routes/budget');
+const walletRoutes = require('./routes/wallets');
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/budget', budgetRoutes);
+app.use('/api/wallets', walletRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

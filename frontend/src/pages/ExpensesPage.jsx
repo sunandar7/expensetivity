@@ -199,7 +199,7 @@ export default function ExpensesPage() {
         </div>
       ) : view === 'table' ? (
         <ExpenseTable expenses={expenses} onEdit={handleEdit} onDelete={handleDeleteRequest} />
-      )  : (
+      ) : (
         <ExpenseCards expenses={expenses} onEdit={handleEdit} onDelete={handleDeleteRequest} />
       )}
 

@@ -68,4 +68,13 @@ export const budgetAPI = {
   set: (data) => api.post('/budget', data),
 };
 
+// ─── Wallets ───────────────────────────────────────
+export const walletAPI = {
+  getAll: () => api.get('/wallets'),
+  getOne: (id) => api.get(`/wallets/${id}`),
+  create: (data) => api.post('/wallets', data),
+  update: (id, data) => api.put(`/wallets/${id}`, data),
+  delete: (id) => api.delete(`/wallets/${id}`),
+};
+
 export default api;

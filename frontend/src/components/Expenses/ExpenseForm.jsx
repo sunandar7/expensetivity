@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Upload, Trash2, Plus, ChevronDown } from 'lucide-react';
 import { useExpenses } from '../../context/ExpenseContext';
 import { useAuth } from '../../context/AuthContext';
+import { walletAPI } from '../../services/api';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import './ExpenseForm.css';
@@ -53,16 +54,15 @@ export default function ExpenseForm({ expense, categories, onClose }) {
   const [wallets, setWallets] = useState([]);
 
   useEffect(() => {
-    const saved = localStorage.getItem('wallets');
-    if (saved) {
-      setWallets(JSON.parse(saved));
-    } else {
-      setWallets([
-        { id: 'w-1', name: 'KBZ Bank', balance: 750000, currency: 'MMK' },
-        { id: 'w-2', name: 'Cash Wallet', balance: 120000, currency: 'MMK' },
-        { id: 'w-3', name: 'USD Savings Card', balance: 2500, currency: 'USD' }
-      ]);
-    }
+    const fetchWallets = async () => {
+      try {
+        const res = await walletAPI.getAll();
+        setWallets(res.data.wallets || []);
+      } catch (err) {
+        console.error('Fetch wallets error:', err);
+      }
+    };
+    fetchWallets();
   }, []);
 
   const handleChange = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
@@ -334,11 +334,14 @@ export default function ExpenseForm({ expense, categories, onClose }) {
                 onChange={handleChange}
               >
                 <option value="">Select wallet...</option>
-                {wallets.map(w => (
-                  <option key={w.id} value={w.id}>
-                    {w.name} ({new Intl.NumberFormat('my-MM').format(w.balance)} {w.currency})
-                  </option>
-                ))}
+                {wallets.map(w => {
+                  const wId = w._id || w.id;
+                  return (
+                    <option key={wId} value={wId}>
+                      {w.name} ({new Intl.NumberFormat('my-MM').format(w.balance)} {w.currency})
+                    </option>
+                  );
+                })}
               </select>
             </div>
 

@@ -6,6 +6,7 @@ import ExpenseTable from '../components/Expenses/ExpenseTable';
 import ExpenseCards from '../components/Expenses/ExpenseCards';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import ConfirmModal from '../components/Common/ConfirmModal';
 import './ExpensesPage.css';
 
 export default function ExpensesPage() {
@@ -26,6 +27,8 @@ export default function ExpensesPage() {
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -50,13 +53,22 @@ export default function ExpensesPage() {
     fetchExpenses({ search: '', category: '', startDate: '', endDate: '', page: 1 });
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this expense?')) return;
+  const handleDeleteRequest = (id) => {
+    const expense = expenses.find(e => e._id === id);
+    setDeleteTarget(expense || { _id: id });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
     try {
-      await deleteExpense(id);
-      toast.success('Expense deleted');
+      await deleteExpense(deleteTarget._id);
+      toast.success('Expense deleted successfully');
+      setDeleteTarget(null);
     } catch {
       toast.error('Failed to delete expense');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -186,9 +198,9 @@ export default function ExpensesPage() {
           )}
         </div>
       ) : view === 'table' ? (
-        <ExpenseTable expenses={expenses} onEdit={handleEdit} onDelete={handleDelete} />
+        <ExpenseTable expenses={expenses} onEdit={handleEdit} onDelete={handleDeleteRequest} />
       )  : (
-        <ExpenseCards expenses={expenses} onEdit={handleEdit} onDelete={handleDelete} />
+        <ExpenseCards expenses={expenses} onEdit={handleEdit} onDelete={handleDeleteRequest} />
       )}
 
       {/* Pagination */}
@@ -214,6 +226,17 @@ export default function ExpensesPage() {
           onClose={handleFormClose}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        title="Delete Expense"
+        message={deleteTarget?.name ? `Are you sure you want to delete "${deleteTarget.name}"? This action cannot be undone.` : 'Are you sure you want to delete this expense? This action cannot be undone.'}
+        confirmText="Delete Expense"
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

@@ -4,31 +4,9 @@ import { Plus, Edit2, Trash2, X, Wallet, CreditCard, Calendar, AlertCircle } fro
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { walletAPI } from '../services/api';
+import ConfirmModal from '../components/Common/ConfirmModal';
 import './WalletPage.css';
-
-const DEFAULT_WALLETS = [
-  {
-    id: 'w-1',
-    name: 'KBZ Bank',
-    balance: 750000,
-    currency: 'MMK',
-    createdAt: '2026-05-15T08:30:00.000Z'
-  },
-  {
-    id: 'w-2',
-    name: 'Cash Wallet',
-    balance: 120000,
-    currency: 'MMK',
-    createdAt: '2026-06-01T10:15:00.000Z'
-  },
-  {
-    id: 'w-3',
-    name: 'USD Savings Card',
-    balance: 2500,
-    currency: 'USD',
-    createdAt: '2026-07-02T14:45:00.000Z'
-  }
-];
 
 const CURRENCY_OPTIONS = [
   { value: 'MMK', label: 'Myanmar Kyat (MMK)', symbol: 'Ks' },
@@ -49,19 +27,32 @@ const CARD_THEMES = [
 
 export default function WalletPage() {
   const { user } = useAuth();
-  const [wallets, setWallets] = useState(() => {
-    const saved = localStorage.getItem('wallets');
-    return saved ? JSON.parse(saved) : DEFAULT_WALLETS;
-  });
+  const [wallets, setWallets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [showModal, setShowModal] = useState(false);
   const [editingWallet, setEditingWallet] = useState(null);
   const [form, setForm] = useState({ name: '', balance: '', currency: 'MMK' });
 
-  // Save to local storage on change
+  // Fetch wallets from backend API
+  const fetchWallets = async () => {
+    setLoading(true);
+    try {
+      const res = await walletAPI.getAll();
+      setWallets(res.data.wallets || []);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to load wallets');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('wallets', JSON.stringify(wallets));
-  }, [wallets]);
+    fetchWallets();
+  }, []);
 
   // Open modal for creating
   const handleAddClick = () => {
@@ -82,12 +73,24 @@ export default function WalletPage() {
     setShowModal(true);
   };
 
-  // Delete handler
+  // Delete handlers
   const handleDeleteClick = (id, name, e) => {
     e.stopPropagation();
-    if (window.confirm(`Are you sure you want to delete the wallet "${name}"?`)) {
-      setWallets(prev => prev.filter(w => w.id !== id));
+    setDeleteTarget({ id, name });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await walletAPI.delete(deleteTarget.id);
       toast.success('Wallet deleted successfully');
+      setDeleteTarget(null);
+      fetchWallets();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete wallet');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -97,7 +100,7 @@ export default function WalletPage() {
   };
 
   // Submit modal form
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) {
       toast.error('Wallet name is required');
@@ -109,34 +112,34 @@ export default function WalletPage() {
       return;
     }
 
-    if (editingWallet) {
-      // Edit mode
-      setWallets(prev => prev.map(w => {
-        if (w.id === editingWallet.id) {
-          return {
-            ...w,
-            name: form.name.trim(),
-            balance: balanceNum,
-            currency: form.currency
-          };
-        }
-        return w;
-      }));
-      toast.success('Wallet updated successfully');
-    } else {
-      // Create mode
-      const newWallet = {
-        id: `w-${Date.now()}`,
-        name: form.name.trim(),
-        balance: balanceNum,
-        currency: form.currency,
-        createdAt: new Date().toISOString()
-      };
-      setWallets(prev => [...prev, newWallet]);
-      toast.success('Wallet created successfully');
-    }
+    setSubmitting(true);
+    try {
+      if (editingWallet) {
+        // Edit mode API
+        const targetId = editingWallet._id || editingWallet.id;
+        await walletAPI.update(targetId, {
+          name: form.name.trim(),
+          balance: balanceNum,
+          currency: form.currency
+        });
+        toast.success('Wallet updated successfully');
+      } else {
+        // Create mode API
+        await walletAPI.create({
+          name: form.name.trim(),
+          balance: balanceNum,
+          currency: form.currency
+        });
+        toast.success('Wallet created successfully');
+      }
 
-    setShowModal(false);
+      setShowModal(false);
+      fetchWallets();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save wallet');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Balance formatting helper
@@ -192,7 +195,16 @@ export default function WalletPage() {
       )}
 
       {/* Cards list */}
-      {wallets.length === 0 ? (
+      {loading ? (
+        <div className="loading-state" style={{ padding: '60px', textAlign: 'center' }}>
+          <div className="loader" style={{
+            width: 36, height: 36, border: '3px solid var(--border)',
+            borderTopColor: 'var(--accent-gold)', borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite', margin: '0 auto 16px'
+          }} />
+          <p style={{ color: 'var(--text-secondary)' }}>Loading wallets...</p>
+        </div>
+      ) : wallets.length === 0 ? (
         <div className="wallet-empty-state">
           <div className="empty-icon-wrap">
             <Wallet size={40} className="empty-icon" />
@@ -208,9 +220,10 @@ export default function WalletPage() {
         <div className="wallet-grid">
           {wallets.map((wallet, index) => {
             const theme = CARD_THEMES[index % CARD_THEMES.length];
+            const walletId = wallet._id || wallet.id;
             return (
               <div
-                key={wallet.id}
+                key={walletId}
                 className="wallet-card-container"
                 style={{ '--card-bg': theme.gradient, '--card-text': theme.text }}
               >
@@ -240,7 +253,7 @@ export default function WalletPage() {
                     <div className="card-date-info">
                       <Calendar size={12} className="meta-icon" />
                       <span>
-                        Created: {format(new Date(wallet.createdAt), 'MMM d, yyyy')}
+                        Created: {wallet.createdAt ? format(new Date(wallet.createdAt), 'MMM d, yyyy') : 'N/A'}
                       </span>
                     </div>
 
@@ -254,7 +267,7 @@ export default function WalletPage() {
                       </button>
                       <button
                         className="card-action-btn delete-btn"
-                        onClick={(e) => handleDeleteClick(wallet.id, wallet.name, e)}
+                        onClick={(e) => handleDeleteClick(walletId, wallet.name, e)}
                         title="Delete Wallet"
                       >
                         <Trash2 size={14} />
@@ -270,11 +283,11 @@ export default function WalletPage() {
 
       {/* Modal dialog for creating/editing */}
       {showModal && createPortal(
-        <div className="modal-backdrop" onClick={() => setShowModal(false)}>
+        <div className="modal-backdrop" onClick={() => !submitting && setShowModal(false)}>
           <div className="modal animate-scale-in" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{editingWallet ? 'Edit Wallet' : 'Add Wallet'}</h2>
-              <button className="modal-close" onClick={() => setShowModal(false)}>
+              <button className="modal-close" onClick={() => setShowModal(false)} disabled={submitting}>
                 <X size={18} />
               </button>
             </div>
@@ -342,11 +355,11 @@ export default function WalletPage() {
               )}
 
               <div className="modal-footer" style={{ marginTop: '24px' }}>
-                <button type="button" className="cancel-btn" onClick={() => setShowModal(false)}>
+                <button type="button" className="cancel-btn" onClick={() => setShowModal(false)} disabled={submitting}>
                   Cancel
                 </button>
-                <button type="submit" className="submit-btn">
-                  {editingWallet ? 'Update Wallet' : 'Create Wallet'}
+                <button type="submit" className="submit-btn" disabled={submitting}>
+                  {submitting ? 'Saving...' : editingWallet ? 'Update Wallet' : 'Create Wallet'}
                 </button>
               </div>
             </form>
@@ -354,6 +367,16 @@ export default function WalletPage() {
         </div>,
         document.body
       )}
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        title="Delete Wallet"
+        message={deleteTarget?.name ? `Are you sure you want to delete "${deleteTarget.name}"? This action cannot be undone.` : 'Are you sure you want to delete this wallet? This action cannot be undone.'}
+        confirmText="Delete Wallet"
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

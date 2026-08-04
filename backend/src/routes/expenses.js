@@ -2,13 +2,14 @@ const express = require('express');
 const { body } = require('express-validator');
 const router = express.Router();
 const {
-  getExpenses, getExpense, createExpense, updateExpense, deleteExpense, getStats
+  getExpenses, getExpense, createExpense, updateExpense, deleteExpense, getStats, convertCurrencyRate
 } = require('../controllers/expenseController');
 const auth = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
 router.use(auth);
 
+router.get('/convert', convertCurrencyRate);
 router.get('/stats/summary', getStats);
 router.get('/', getExpenses);
 router.get('/:id', getExpense);

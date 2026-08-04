@@ -60,6 +60,7 @@ export const expenseAPI = {
   }),
   delete: (id) => api.delete(`/expenses/${id}`),
   getStats: (params) => api.get('/expenses/stats/summary', { params }),
+  convertCurrency: (params) => api.get('/expenses/convert', { params }),
 };
 
 // ─── Budget ────────────────────────────────────────

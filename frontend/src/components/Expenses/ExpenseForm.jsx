@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Upload, Trash2, Plus, ChevronDown } from 'lucide-react';
 import { useExpenses } from '../../context/ExpenseContext';
 import { useAuth } from '../../context/AuthContext';
-import { walletAPI } from '../../services/api';
+import { walletAPI, expenseAPI } from '../../services/api';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import './ExpenseForm.css';
@@ -52,6 +52,7 @@ export default function ExpenseForm({ expense, categories, onClose }) {
   const [newCat, setNewCat] = useState({ name: '', icon: '📌', color: '#AAB7B8' });
   const [creatingCat, setCreatingCat] = useState(false);
   const [wallets, setWallets] = useState([]);
+  const [conversionText, setConversionText] = useState('');
 
   useEffect(() => {
     const fetchWallets = async () => {
@@ -64,6 +65,65 @@ export default function ExpenseForm({ expense, categories, onClose }) {
     };
     fetchWallets();
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const updateHelperText = async () => {
+      if (!form.walletId || !form.amount || isNaN(parseFloat(form.amount)) || parseFloat(form.amount) <= 0) {
+        if (isMounted) setConversionText('');
+        return;
+      }
+
+      const selectedWallet = wallets.find(w => (w._id || w.id) === form.walletId);
+      if (!selectedWallet) {
+        if (isMounted) setConversionText('');
+        return;
+      }
+
+      const expAmount = parseFloat(form.amount);
+      const expCurrency = (form.currency || 'MMK').toUpperCase();
+      const walletCurrency = (selectedWallet.currency || 'MMK').toUpperCase();
+      const formattedExpAmount = new Intl.NumberFormat('en-US').format(expAmount);
+
+      if (expCurrency === walletCurrency) {
+        const symbolMap = { USD: '$', MMK: 'Ks ', THB: '฿', JPY: '¥', KRW: '₩', EUR: '€' };
+        const symbol = symbolMap[walletCurrency] || '';
+        if (isMounted) {
+          setConversionText(`Note: ${symbol}${formattedExpAmount} ${expCurrency} will be deducted from your ${selectedWallet.name} Wallet.`);
+        }
+        return;
+      }
+
+      try {
+        const res = await expenseAPI.convertCurrency({
+          amount: expAmount,
+          from: expCurrency,
+          to: walletCurrency
+        });
+
+        if (isMounted && res.data) {
+          const converted = res.data.convertedAmount;
+          const symbolMap = { USD: '$', MMK: 'Ks ', THB: '฿', JPY: '¥', KRW: '₩', EUR: '€' };
+          const symbol = symbolMap[walletCurrency] || '';
+          const formattedConverted = `${symbol}${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(converted)} ${walletCurrency}`.trim();
+
+          setConversionText(
+            `Note: ${formattedExpAmount} ${expCurrency} will be converted to approx. ${formattedConverted} and deducted from your ${selectedWallet.name} Wallet.`
+          );
+        }
+      } catch (err) {
+        console.error('Conversion helper error:', err);
+        if (isMounted) setConversionText('');
+      }
+    };
+
+    updateHelperText();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [form.amount, form.currency, form.walletId, wallets]);
 
   const handleChange = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
@@ -343,6 +403,11 @@ export default function ExpenseForm({ expense, categories, onClose }) {
                   );
                 })}
               </select>
+              {conversionText && (
+                <p className="wallet-helper-text">
+                  {conversionText}
+                </p>
+              )}
             </div>
 
             {/* Note */}

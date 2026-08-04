@@ -3,9 +3,22 @@ const path = require('path');
 const fs = require('fs');
 const Expense = require('../models/Expense');
 const Budget = require('../models/Budget');
+const Wallet = require('../models/Wallet');
 const { isCloudinaryConfigured } = require('../config/cloudinary');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary');
 const { convertAmount } = require('../utils/exchangeRate');
+const { withTransaction } = require('../utils/transaction');
+
+const getWalletDeductAmount = async (expenseAmount, expenseCurrency, walletCurrency) => {
+  const normExp = (expenseCurrency || 'MMK').toUpperCase();
+  const normWallet = (walletCurrency || 'MMK').toUpperCase();
+
+  if (normExp === normWallet) {
+    return expenseAmount;
+  }
+  const { baseAmount } = await convertAmount(expenseAmount, normExp, normWallet);
+  return baseAmount;
+};
 
 const checkBudgetLimit = async (userId, targetDate) => {
   const date = new Date(targetDate);
@@ -124,22 +137,24 @@ const createExpense = async (req, res) => {
       return res.status(400).json({ message: errors.array()[0].msg });
     }
 
-    const { name, category, amount, date, note, currency } = req.body;
-
+    const { name, category, amount, date, note, currency, walletId } = req.body;
+    const numAmount = parseFloat(amount);
     const userBaseCurrency = (req.user?.baseCurrency || 'MMK').toUpperCase();
-    const expenseCurrency = (currency || 'MMK').toUpperCase();
-    const { exchangeRateUsed, baseAmount } = await convertAmount(parseFloat(amount), expenseCurrency, userBaseCurrency);
+    const expenseCurrency = (currency || userBaseCurrency).toUpperCase();
+
+    const { exchangeRateUsed, baseAmount } = await convertAmount(numAmount, expenseCurrency, userBaseCurrency);
 
     const expenseData = {
       userId: req.userId,
       name,
       category,
-      amount: parseFloat(amount),
+      amount: numAmount,
       currency: expenseCurrency,
       exchangeRateUsed,
       baseAmount,
       date: date || new Date(),
-      note
+      note,
+      walletId: walletId || null
     };
 
     if (req.file) {
@@ -176,70 +191,152 @@ const createExpense = async (req, res) => {
       }
     }
 
-    const expense = await Expense.create(expenseData);
-    await expense.populate('category', 'name icon color');
+    let createdExpense;
+    await withTransaction(async (session) => {
+      const opts = session ? { session } : {};
 
-    const budgetStatus = await checkBudgetLimit(req.userId, expense.date);
+      // If wallet is selected, check balance and deduct
+      if (walletId) {
+        const wallet = await Wallet.findOne({ _id: walletId, userId: req.userId }, null, opts);
+        if (!wallet) {
+          const err = new Error('Selected wallet not found or unauthorized.');
+          err.statusCode = 404;
+          throw err;
+        }
+
+        const walletDeductAmount = await getWalletDeductAmount(numAmount, expenseCurrency, wallet.currency);
+
+        if (wallet.balance < walletDeductAmount) {
+          const err = new Error(`Insufficient wallet balance in "${wallet.name}". Required: ${new Intl.NumberFormat().format(walletDeductAmount)} ${wallet.currency}, Available: ${new Intl.NumberFormat().format(wallet.balance)} ${wallet.currency}`);
+          err.statusCode = 400;
+          throw err;
+        }
+
+        wallet.balance = Math.round((wallet.balance - walletDeductAmount) * 100) / 100;
+        await wallet.save(opts);
+      }
+
+      const expense = new Expense(expenseData);
+      await expense.save(opts);
+      createdExpense = expense;
+    });
+
+    await createdExpense.populate('category', 'name icon color');
+
+    const budgetStatus = await checkBudgetLimit(req.userId, createdExpense.date);
 
     res.status(201).json({
       message: 'Expense added!',
-      expense,
+      expense: createdExpense,
       ...budgetStatus
     });
   } catch (err) {
     console.error('Create expense error:', err);
-    res.status(500).json({ message: 'Server error.' });
+    res.status(err.statusCode || 500).json({ message: err.message || 'Server error.' });
   }
 };
 
 // PUT /api/expenses/:id
 const updateExpense = async (req, res) => {
   try {
-    const expense = await Expense.findOne({ _id: req.params.id, userId: req.userId });
-    if (!expense) return res.status(404).json({ message: 'Expense not found.' });
+    const { name, category, amount, date, note, currency, walletId } = req.body;
+    let updatedExpense;
 
-    const { name, category, amount, date, note, currency } = req.body;
+    await withTransaction(async (session) => {
+      const opts = session ? { session } : {};
 
-    const updatedAmount = amount !== undefined ? parseFloat(amount) : expense.amount;
-    const updatedCurrency = (currency || expense.currency || 'MMK').toUpperCase();
-    const userBaseCurrency = (req.user?.baseCurrency || 'MMK').toUpperCase();
-
-    const { exchangeRateUsed, baseAmount } = await convertAmount(updatedAmount, updatedCurrency, userBaseCurrency);
-
-    Object.assign(expense, {
-      name: name || expense.name,
-      category: category || expense.category,
-      amount: updatedAmount,
-      currency: updatedCurrency,
-      exchangeRateUsed,
-      baseAmount,
-      date: date || expense.date,
-      note: note !== undefined ? note : expense.note
-    });
-
-    if (req.file) {
-      // Remove old receipt file if exists
-      if (expense.receipt?.publicId) {
-        await deleteFromCloudinary(expense.receipt.publicId, expense.receipt.resourceType);
-      } else if (expense.receipt?.filename) {
-        const oldPath = path.join(__dirname, '../../uploads', expense.receipt.filename);
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      const expense = await Expense.findOne({ _id: req.params.id, userId: req.userId }, null, opts);
+      if (!expense) {
+        const err = new Error('Expense not found.');
+        err.statusCode = 404;
+        throw err;
       }
 
-      if (isCloudinaryConfigured) {
-        try {
-          const cloudinaryResult = await uploadToCloudinary(req.file.path, 'expense-tracker');
-          expense.receipt = {
-            filename: req.file.filename,
-            originalName: req.file.originalname,
-            mimetype: req.file.mimetype,
-            size: req.file.size,
-            url: cloudinaryResult.url,
-            publicId: cloudinaryResult.publicId,
-            resourceType: cloudinaryResult.resourceType
-          };
-        } catch (uploadErr) {
-          console.error('Failed to upload to Cloudinary on update, falling back to local:', uploadErr);
+      const oldWalletId = expense.walletId;
+      const oldAmount = expense.amount;
+      const oldCurrency = expense.currency;
+
+      const newAmount = amount !== undefined ? parseFloat(amount) : expense.amount;
+      const newCurrency = (currency || expense.currency || 'MMK').toUpperCase();
+      const newWalletId = walletId !== undefined ? (walletId || null) : expense.walletId;
+
+      const userBaseCurrency = (req.user?.baseCurrency || 'MMK').toUpperCase();
+      const { exchangeRateUsed, baseAmount } = await convertAmount(newAmount, newCurrency, userBaseCurrency);
+
+      // Revert old wallet balance if previously attached
+      if (oldWalletId) {
+        const oldWallet = await Wallet.findOne({ _id: oldWalletId, userId: req.userId }, null, opts);
+        if (oldWallet) {
+          const oldDeduct = await getWalletDeductAmount(oldAmount, oldCurrency, oldWallet.currency);
+          oldWallet.balance = Math.round((oldWallet.balance + oldDeduct) * 100) / 100;
+          await oldWallet.save(opts);
+        }
+      }
+
+      // Deduct from new wallet if attached
+      if (newWalletId) {
+        const newWallet = await Wallet.findOne({ _id: newWalletId, userId: req.userId }, null, opts);
+        if (!newWallet) {
+          const err = new Error('Selected wallet not found or unauthorized.');
+          err.statusCode = 404;
+          throw err;
+        }
+
+        const newDeduct = await getWalletDeductAmount(newAmount, newCurrency, newWallet.currency);
+
+        if (newWallet.balance < newDeduct) {
+          const err = new Error(`Insufficient wallet balance in "${newWallet.name}". Required: ${new Intl.NumberFormat().format(newDeduct)} ${newWallet.currency}, Available: ${new Intl.NumberFormat().format(newWallet.balance)} ${newWallet.currency}`);
+          err.statusCode = 400;
+          throw err;
+        }
+
+        newWallet.balance = Math.round((newWallet.balance - newDeduct) * 100) / 100;
+        await newWallet.save(opts);
+      }
+
+      Object.assign(expense, {
+        name: name || expense.name,
+        category: category || expense.category,
+        amount: newAmount,
+        currency: newCurrency,
+        exchangeRateUsed,
+        baseAmount,
+        date: date || expense.date,
+        note: note !== undefined ? note : expense.note,
+        walletId: newWalletId
+      });
+
+      if (req.file) {
+        if (expense.receipt?.publicId) {
+          await deleteFromCloudinary(expense.receipt.publicId, expense.receipt.resourceType);
+        } else if (expense.receipt?.filename) {
+          const oldPath = path.join(__dirname, '../../uploads', expense.receipt.filename);
+          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        }
+
+        if (isCloudinaryConfigured) {
+          try {
+            const cloudinaryResult = await uploadToCloudinary(req.file.path, 'expense-tracker');
+            expense.receipt = {
+              filename: req.file.filename,
+              originalName: req.file.originalname,
+              mimetype: req.file.mimetype,
+              size: req.file.size,
+              url: cloudinaryResult.url,
+              publicId: cloudinaryResult.publicId,
+              resourceType: cloudinaryResult.resourceType
+            };
+          } catch (uploadErr) {
+            console.error('Failed to upload to Cloudinary on update, falling back to local:', uploadErr);
+            expense.receipt = {
+              filename: req.file.filename,
+              originalName: req.file.originalname,
+              mimetype: req.file.mimetype,
+              size: req.file.size,
+              url: `/uploads/${req.file.filename}`
+            };
+          }
+        } else {
           expense.receipt = {
             filename: req.file.filename,
             originalName: req.file.originalname,
@@ -248,50 +345,90 @@ const updateExpense = async (req, res) => {
             url: `/uploads/${req.file.filename}`
           };
         }
-      } else {
-        expense.receipt = {
-          filename: req.file.filename,
-          originalName: req.file.originalname,
-          mimetype: req.file.mimetype,
-          size: req.file.size,
-          url: `/uploads/${req.file.filename}`
-        };
       }
-    }
 
-    await expense.save();
-    await expense.populate('category', 'name icon color');
+      await expense.save(opts);
+      updatedExpense = expense;
+    });
 
-    const budgetStatus = await checkBudgetLimit(req.userId, expense.date);
+    await updatedExpense.populate('category', 'name icon color');
+
+    const budgetStatus = await checkBudgetLimit(req.userId, updatedExpense.date);
 
     res.json({
       message: 'Expense updated!',
-      expense,
+      expense: updatedExpense,
       ...budgetStatus
     });
   } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
+    console.error('Update expense error:', err);
+    res.status(err.statusCode || 500).json({ message: err.message || 'Server error.' });
   }
 };
 
 // DELETE /api/expenses/:id
 const deleteExpense = async (req, res) => {
   try {
-    const expense = await Expense.findOne({ _id: req.params.id, userId: req.userId });
-    if (!expense) return res.status(404).json({ message: 'Expense not found.' });
+    await withTransaction(async (session) => {
+      const opts = session ? { session } : {};
 
-    // Remove receipt file
-    if (expense.receipt?.publicId) {
-      await deleteFromCloudinary(expense.receipt.publicId, expense.receipt.resourceType);
-    } else if (expense.receipt?.filename) {
-      const filePath = path.join(__dirname, '../../uploads', expense.receipt.filename);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    }
+      const expense = await Expense.findOne({ _id: req.params.id, userId: req.userId }, null, opts);
+      if (!expense) {
+        const err = new Error('Expense not found.');
+        err.statusCode = 404;
+        throw err;
+      }
 
-    await expense.deleteOne();
+      // Restore wallet balance if wallet was attached
+      if (expense.walletId) {
+        const wallet = await Wallet.findOne({ _id: expense.walletId, userId: req.userId }, null, opts);
+        if (wallet) {
+          const refundAmount = await getWalletDeductAmount(expense.amount, expense.currency, wallet.currency);
+          wallet.balance = Math.round((wallet.balance + refundAmount) * 100) / 100;
+          await wallet.save(opts);
+        }
+      }
+
+      // Remove receipt file
+      if (expense.receipt?.publicId) {
+        await deleteFromCloudinary(expense.receipt.publicId, expense.receipt.resourceType);
+      } else if (expense.receipt?.filename) {
+        const filePath = path.join(__dirname, '../../uploads', expense.receipt.filename);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      }
+
+      await expense.deleteOne(opts);
+    });
+
     res.json({ message: 'Expense deleted.' });
   } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
+    console.error('Delete expense error:', err);
+    res.status(err.statusCode || 500).json({ message: err.message || 'Server error.' });
+  }
+};
+
+// GET /api/expenses/convert
+const convertCurrencyRate = async (req, res) => {
+  try {
+    const { amount, from, to } = req.query;
+    if (!amount || !from || !to) {
+      return res.status(400).json({ message: 'Missing parameters: amount, from, and to are required.' });
+    }
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount)) {
+      return res.status(400).json({ message: 'Invalid amount parameter.' });
+    }
+    const { exchangeRateUsed, baseAmount } = await convertAmount(numAmount, from.toUpperCase(), to.toUpperCase());
+    res.json({
+      amount: numAmount,
+      from: from.toUpperCase(),
+      to: to.toUpperCase(),
+      exchangeRateUsed,
+      convertedAmount: baseAmount
+    });
+  } catch (err) {
+    console.error('Convert currency error:', err);
+    res.status(500).json({ message: 'Currency conversion failed.' });
   }
 };
 
@@ -342,4 +479,4 @@ const getStats = async (req, res) => {
   }
 };
 
-module.exports = { getExpenses, getExpense, createExpense, updateExpense, deleteExpense, getStats };
+module.exports = { getExpenses, getExpense, createExpense, updateExpense, deleteExpense, getStats, convertCurrencyRate };

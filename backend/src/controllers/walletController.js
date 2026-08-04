@@ -1,5 +1,6 @@
 const { validationResult } = require('express-validator');
 const Wallet = require('../models/Wallet');
+const Expense = require('../models/Expense');
 
 // GET /api/wallets — get all wallets for the authenticated user
 const getWallets = async (req, res) => {
@@ -116,6 +117,14 @@ const deleteWallet = async (req, res) => {
     const wallet = await Wallet.findOne({ _id: req.params.id, userId: req.userId });
     if (!wallet) {
       return res.status(404).json({ message: 'Wallet not found or not authorized.' });
+    }
+
+    // Restrict deletion if this wallet has associated expenses
+    const relatedExpensesCount = await Expense.countDocuments({ walletId: wallet._id });
+    if (relatedExpensesCount > 0) {
+      return res.status(400).json({
+        message: `Cannot delete wallet "${wallet.name}" because it is linked to ${relatedExpensesCount} associated expense(s). Please delete or reassign those expenses first.`
+      });
     }
 
     await wallet.deleteOne();

@@ -1,149 +1,182 @@
-# 💸 Expensetivity — Myanmar Expense Tracker
+# Expensetivity - Expense & Wallet Tracker
 
-A full-stack expense tracking application built with React.js + Node.js, featuring MMK currency support, receipt uploads, and beautiful card view.
-
----
-
-## ✨ Features
-
-- 🔐 **User Auth** — Register/Login with JWT
-- 📊 **Dashboard** — Spending stats, pie chart by category, 6-month bar chart trend
-- 💸 **Expense Management** — Add, edit, delete expenses
-- 🗂️ **Card Views** — Show expenses in card view
-- 🏷️ **Custom Categories** — Default categories + create your own with emoji & color
-- 🔍 **Filter & Search** — By name, category, date range
-- 📎 **Receipt Upload** — Attach JPG, PNG, PDF receipts
-- 💰 **MMK Currency** — All amounts in Myanmar Kyat
-- 📱 **Responsive** — Works on mobile and desktop
+A full-stack multi-currency expense tracking and wallet management application built with React.js and Node.js. It features multi-currency auto-conversion, daily exchange rate synchronization, wallet tracking, monthly budget planning, receipt uploads, and visual analytics dashboards.
 
 ---
 
-## 🗂️ Project Structure
+## Features
+
+- **User Authentication**: Secure user registration, login, JWT token authentication, and user profile/base currency settings.
+- **Multi-Currency Support**: Support for MMK, USD, JPY, THB, KRW with real-time automatic conversion to the user's base currency.
+- **Automated Exchange Rate Sync**: Daily cron job fetching official exchange rates automatically synchronized at 3:30 PM MMT.
+- **Wallet Management**: Create and manage multiple accounts/wallets with distinct currencies and balance tracking linked to expenses.
+- **Budgeting System**: Set monthly spending limits, view remaining allowance, and monitor budget utilization progress.
+- **Expense Tracking**: Add, edit, and delete detailed expense records including category, wallet, payment method, date, notes, and currency.
+- **Receipt Uploads**: Attach receipt images or PDF files stored via Cloudinary or local storage.
+- **Custom Categories**: Built-in default categories plus user-defined custom categories with customizable color indicators.
+- **Dashboard & Analytics**: Overview of total spending, category distribution breakdown (pie chart), and 6-month spending trends (bar chart).
+- **Search & Filtering**: Multi-field search, category filter, date range filter, pagination, and sorting (date, amount, name).
+- **Theme & Interface**: Responsive design supporting dark and light themes with smooth user interface interactions.
+
+---
+
+## Project Structure
 
 ```
 expense-tracker/
-├── backend/          # Node.js + Express + MongoDB
-└── frontend/         # React.js
+├── backend/          # Node.js + Express.js + MongoDB API & Cron scheduler
+└── frontend/         # React.js + Vite UI frontend application
 ```
 
 ---
 
-## ⚙️ Setup
+## Setup & Installation
 
 ### Prerequisites
-- Node.js 18+
-- MongoDB (local or MongoDB Atlas)
 
-### 1. Clone & Install
+- Node.js 18+
+- MongoDB (Local instance or MongoDB Atlas cluster)
+
+### 1. Clone & Dependencies Installation
 
 ```bash
-# Backend
+# Backend Setup
 cd backend
 cp .env.example .env
-# Edit .env with your MongoDB URI and JWT secret
+# Configure environment variables in backend/.env
 npm install
 
-# Frontend
+# Frontend Setup
 cd ../frontend
 cp .env.example .env
 npm install
 ```
 
-### 2. Configure Environment
+### 2. Configure Environment Variables
 
 **backend/.env**
-```
+```env
 PORT=5000
 MONGODB_URI=mongodb://localhost:27017/expense_tracker
-JWT_SECRET=your_super_secret_key_here
+JWT_SECRET=your_jwt_secret_key_here
 JWT_EXPIRES_IN=7d
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+FRONTEND_URL=http://localhost:3000
 ```
 
 **frontend/.env**
-```
+```env
 VITE_API_URL=http://localhost:5000/api
 ```
 
-### 3. Run
+### 3. Run Application
 
 ```bash
-# Terminal 1 — Backend
+# Terminal 1 - Backend Server
 cd backend
 npm run dev
 
-# Terminal 2 — Frontend
+# Terminal 2 - Frontend Development Server
 cd frontend
 npm run dev
 ```
 
-The app will be at **http://localhost:3000**
+The application will be accessible at **http://localhost:3000** (or **http://localhost:5173**).
 
 ---
 
-## 🔌 API Reference
+## API Reference
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/auth/register` | ❌ | Register |
-| POST | `/api/auth/login` | ❌ | Login |
-| GET | `/api/auth/me` | ✅ | Get current user |
-| GET | `/api/expenses` | ✅ | List expenses (paginated, filterable) |
-| POST | `/api/expenses` | ✅ | Create expense (multipart/form-data) |
-| PUT | `/api/expenses/:id` | ✅ | Update expense |
-| DELETE | `/api/expenses/:id` | ✅ | Delete expense |
-| GET | `/api/expenses/stats/summary` | ✅ | Dashboard stats |
-| GET | `/api/categories` | ✅ | List all categories |
-| POST | `/api/categories` | ✅ | Create custom category |
-| DELETE | `/api/categories/:id` | ✅ | Delete custom category |
+### Authentication Routes
 
-### Query Parameters for GET /api/expenses
-| Param | Type | Description |
-|-------|------|-------------|
-| `page` | number | Page number (default: 1) |
-| `limit` | number | Items per page (default: 20) |
-| `search` | string | Search by name |
-| `category` | string | Filter by category ID |
-| `startDate` | ISO date | Filter from date |
-| `endDate` | ISO date | Filter to date |
-| `sortBy` | string | `date`, `amount`, `name` |
-| `sortOrder` | string | `asc` or `desc` |
+| Method | Endpoint | Auth Required | Description |
+|--------|----------|---------------|-------------|
+| POST | `/api/auth/register` | No | Register new user account |
+| POST | `/api/auth/login` | No | User login & retrieve JWT token |
+| GET | `/api/auth/me` | Yes | Get authenticated user profile |
+| PUT | `/api/auth/profile` | Yes | Update user profile & base currency |
+
+### Expense Routes
+
+| Method | Endpoint | Auth Required | Description |
+|--------|----------|---------------|-------------|
+| GET | `/api/expenses` | Yes | Get paginated list of expenses with filters |
+| GET | `/api/expenses/:id` | Yes | Get single expense details |
+| POST | `/api/expenses` | Yes | Create expense with optional receipt upload |
+| PUT | `/api/expenses/:id` | Yes | Update expense details or receipt |
+| DELETE | `/api/expenses/:id` | Yes | Delete expense record |
+| GET | `/api/expenses/stats/summary` | Yes | Get spending dashboard summary stats |
+| GET | `/api/expenses/convert` | Yes | Convert currency rates |
+
+### Wallet Routes
+
+| Method | Endpoint | Auth Required | Description |
+|--------|----------|---------------|-------------|
+| GET | `/api/wallets` | Yes | List all user wallets |
+| GET | `/api/wallets/:id` | Yes | Get single wallet details |
+| POST | `/api/wallets` | Yes | Create new wallet |
+| PUT | `/api/wallets/:id` | Yes | Update wallet details |
+| DELETE | `/api/wallets/:id` | Yes | Delete wallet |
+
+### Budget Routes
+
+| Method | Endpoint | Auth Required | Description |
+|--------|----------|---------------|-------------|
+| GET | `/api/budget/current` | Yes | Get current active budget |
+| POST | `/api/budget` | Yes | Set or update monthly budget limit |
+
+### Category Routes
+
+| Method | Endpoint | Auth Required | Description |
+|--------|----------|---------------|-------------|
+| GET | `/api/categories` | Yes | Get default & custom categories |
+| POST | `/api/categories` | Yes | Create custom category |
+| DELETE | `/api/categories/:id` | Yes | Delete custom category |
+
+### System Routes
+
+| Method | Endpoint | Auth Required | Description |
+|--------|----------|---------------|-------------|
+| GET | `/api/health` | No | System health check & exchange rate trigger |
 
 ---
 
-## 🎨 Tech Stack
+## Tech Stack
 
-**Frontend**
+### Frontend
 - React 18 + React Router 6
-- Vite 5 (build tool)
-- Recharts (charts)
-- Axios (HTTP)
-- react-hot-toast (notifications)
-- date-fns (date formatting)
-- Custom CSS (no Tailwind dependency)
+- Vite 5
+- Recharts (Data visualization & charts)
+- Axios (HTTP Client)
+- react-hot-toast (Notifications)
+- date-fns (Date utilities)
+- Custom CSS Design Tokens
 
-**Backend**
+### Backend
 - Express.js
-- Mongoose + MongoDB
-- JWT (jsonwebtoken)
-- bcryptjs (password hashing)
-- Multer (file uploads)
+- MongoDB + Mongoose ORM
+- JWT (jsonwebtoken) & bcryptjs
+- Multer & Cloudinary SDK
+- node-cron (Automated scheduler)
 - express-validator
 
 ---
 
-## 📁 Default Categories
+## Default Categories
 
-Food & Dining · Saving · Cosmetic · Transport · Shopping · Healthcare · Entertainment · Bills & Utilities · Education · Other
+Food & Dining, Saving, Cosmetic, Transport, Shopping, Healthcare, Entertainment, Bills & Utilities, Education, Other.
 
-Users can create additional custom categories with custom emoji and color.
+Users can also create custom categories with custom color tags.
 
 ---
 
-## 🔒 Security Notes
+## Security & Reliability
 
-- Passwords are hashed with bcrypt (12 rounds)
-- JWT tokens expire in 7 days
-- File uploads limited to 5MB
-- Only accepted filetypes: JPG, PNG, WEBP, PDF
-- All expense routes are protected with JWT middleware
-- Users can only access their own data
+- Password security hashed using bcrypt (12 rounds).
+- Protected REST API endpoints using JWT bearer tokens.
+- Secure receipt handling limited to 5MB (supported formats: JPG, PNG, WEBP, PDF).
+- Isolated per-user data access scoping across all queries.
+- CORS policies configured for production & development environments.
+

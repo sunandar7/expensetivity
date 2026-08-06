@@ -1,7 +1,14 @@
-const { fetchExchangeRates } = require('./exchangeRate');
+const { fetchExchangeRates, getLatestRates } = require('./exchangeRate');
 
-const initCronJobs = () => {
-  console.log('Initializing zero-dependency daily exchange rate scheduler (Myanmar Time)...');
+const initCronJobs = async () => {
+  console.log('Initializing daily exchange rate scheduler (Myanmar Time)...');
+
+  // Trigger initial check/fetch on startup if rates are missing or stale
+  try {
+    await getLatestRates();
+  } catch (err) {
+    console.error('Error during initial exchange rate check:', err);
+  }
 
   const scheduleNextRun = () => {
     const now = new Date();
@@ -13,11 +20,11 @@ const initCronJobs = () => {
     const myanmarOffset = 6.5 * 60 * 60 * 1000;
     const nowMyanmar = new Date(nowUTC + myanmarOffset);
     
-    // 3. Set Target to Today's 12:05 AM in Myanmar Time
+    // 3. Set Target to Today's 3:30 PM in Myanmar Time
     const targetMyanmar = new Date(nowUTC + myanmarOffset);
-    targetMyanmar.setUTCHours(0, 5, 0, 0); // 12:05 AM Myanmar Time
+    targetMyanmar.setUTCHours(15, 30, 0, 0); // 3:30 PM Myanmar Time
 
-    // 4. Target already passed today? Set to Tomorrow 12:05 AM Myanmar Time
+    // 4. Target already passed today? Set to Tomorrow 3:30 PM Myanmar Time
     if (targetMyanmar <= nowMyanmar) {
       targetMyanmar.setUTCDate(targetMyanmar.getUTCDate() + 1);
     }

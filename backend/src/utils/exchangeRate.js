@@ -45,13 +45,42 @@ const fetchExchangeRates = async () => {
   return null;
 };
 
-// Retrieve latest rates from DB; if none exist, fetch them immediately
+// Helper to check if fetched exchange rates are stale (older than 24h or fetched before today's 3:30 PM MMT)
+const isRateStale = (fetchedAt) => {
+  if (!fetchedAt) return true;
+  const now = new Date();
+  const fetched = new Date(fetchedAt);
+
+  // 1. Older than 24 hours
+  if (now.getTime() - fetched.getTime() > 24 * 60 * 60 * 1000) {
+    return true;
+  }
+
+  // 2. Myanmar Time 3:30 PM target check
+  const myanmarOffset = 6.5 * 60 * 60 * 1000;
+  const nowMMT = new Date(now.getTime() + myanmarOffset);
+  const targetTodayMMT = new Date(now.getTime() + myanmarOffset);
+  targetTodayMMT.setUTCHours(15, 30, 0, 0); // 3:30 PM MMT
+  const targetTodayUTC = new Date(targetTodayMMT.getTime() - myanmarOffset);
+
+  // If 3:30 PM MMT today has passed, but rates were fetched before today's 3:30 PM MMT
+  if (nowMMT >= targetTodayMMT && fetched < targetTodayUTC) {
+    return true;
+  }
+
+  return false;
+};
+
+// Retrieve latest rates from DB; if none exist or if rates are stale, fetch them immediately
 const getLatestRates = async () => {
   try {
     let rateDoc = await ExchangeRate.findOne().sort({ fetchedAt: -1 });
-    if (!rateDoc) {
-      console.log('No exchange rates found in database. Triggering initial fetch...');
-      rateDoc = await fetchExchangeRates();
+    if (!rateDoc || isRateStale(rateDoc.fetchedAt)) {
+      console.log('Exchange rates missing or stale in database. Fetching fresh rates from API...');
+      const freshRates = await fetchExchangeRates();
+      if (freshRates) {
+        rateDoc = freshRates;
+      }
     }
     return rateDoc;
   } catch (err) {
@@ -165,5 +194,6 @@ module.exports = {
   fetchExchangeRates,
   getLatestRates,
   convertAmount,
-  migrateExistingExpenses
+  migrateExistingExpenses,
+  isRateStale
 };

@@ -52,7 +52,13 @@ app.use('/api/budget', budgetRoutes);
 app.use('/api/wallets', walletRoutes);
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  try {
+    const { getLatestRates } = require('./utils/exchangeRate');
+    await getLatestRates();
+  } catch (err) {
+    console.error('Error checking rates in health check:', err);
+  }
   res.json({ status: 'OK', message: 'Expense Tracker API is running' });
 });
 
@@ -103,7 +109,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/expense_t
 
     // Initialize daily exchange rate scheduler
     const { initCronJobs } = require('./utils/cron');
-    initCronJobs();
+    await initCronJobs();
 
     // Migrate existing expenses to populate baseAmount and exchangeRateUsed if missing
     const { migrateExistingExpenses } = require('./utils/exchangeRate');

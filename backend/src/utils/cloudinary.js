@@ -7,35 +7,63 @@ const { cloudinary, isCloudinaryConfigured } = require('../config/cloudinary');
  * @param {string} folder - Folder name in Cloudinary.
  * @returns {Promise<{ url: string, publicId: string, resourceType: string }>}
  */
-const uploadToCloudinary = async (localFilePath, folder = 'expense-tracker') => {
+const uploadToCloudinary = async (fileInput, folder = 'expense-tracker') => {
   if (!isCloudinaryConfigured) {
     throw new Error('Cloudinary is not configured.');
   }
 
-  try {
-    const result = await cloudinary.uploader.upload(localFilePath, {
-      folder,
-      resource_type: 'auto'
+  // Handle Buffer or Express File object with buffer (from multer.memoryStorage)
+  const buffer = Buffer.isBuffer(fileInput) ? fileInput : fileInput?.buffer;
+  if (buffer) {
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder,
+          resource_type: 'auto'
+        },
+        (error, result) => {
+          if (error) {
+            console.error('Cloudinary upload_stream error:', error);
+            return reject(error);
+          }
+          resolve({
+            url: result.secure_url,
+            publicId: result.public_id,
+            resourceType: result.resource_type
+          });
+        }
+      );
+      uploadStream.end(buffer);
     });
-
-    // Remove local file after successful upload to Cloudinary
-    if (fs.existsSync(localFilePath)) {
-      fs.unlinkSync(localFilePath);
-    }
-
-    return {
-      url: result.secure_url,
-      publicId: result.public_id,
-      resourceType: result.resource_type
-    };
-  } catch (error) {
-    console.error('Cloudinary upload error:', error);
-    // Remove local file if upload fails to avoid local leakage
-    if (fs.existsSync(localFilePath)) {
-      fs.unlinkSync(localFilePath);
-    }
-    throw error;
   }
+
+  // Handle local file path string (legacy disk storage)
+  if (typeof fileInput === 'string') {
+    try {
+      const result = await cloudinary.uploader.upload(fileInput, {
+        folder,
+        resource_type: 'auto'
+      });
+
+      if (fs.existsSync(fileInput)) {
+        fs.unlinkSync(fileInput);
+      }
+
+      return {
+        url: result.secure_url,
+        publicId: result.public_id,
+        resourceType: result.resource_type
+      };
+    } catch (error) {
+      console.error('Cloudinary upload error:', error);
+      if (fs.existsSync(fileInput)) {
+        fs.unlinkSync(fileInput);
+      }
+      throw error;
+    }
+  }
+
+  throw new Error('Invalid file input provided to uploadToCloudinary.');
 };
 
 /**

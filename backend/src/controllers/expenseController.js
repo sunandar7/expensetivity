@@ -1,6 +1,7 @@
 const { validationResult } = require('express-validator');
 const path = require('path');
 const fs = require('fs');
+const { v4: uuidv4 } = require('uuid');
 const Expense = require('../models/Expense');
 const Budget = require('../models/Budget');
 const Wallet = require('../models/Wallet');
@@ -158,11 +159,12 @@ const createExpense = async (req, res) => {
     };
 
     if (req.file) {
+      const generatedFilename = req.file.filename || `${uuidv4()}${path.extname(req.file.originalname || '').toLowerCase()}`;
       if (isCloudinaryConfigured) {
         try {
-          const cloudinaryResult = await uploadToCloudinary(req.file.path, 'expense-tracker');
+          const cloudinaryResult = await uploadToCloudinary(req.file.path || req.file, 'expense-tracker');
           expenseData.receipt = {
-            filename: req.file.filename,
+            filename: generatedFilename,
             originalName: req.file.originalname,
             mimetype: req.file.mimetype,
             size: req.file.size,
@@ -173,20 +175,20 @@ const createExpense = async (req, res) => {
         } catch (uploadErr) {
           console.error('Failed to upload to Cloudinary, falling back to local storage:', uploadErr);
           expenseData.receipt = {
-            filename: req.file.filename,
+            filename: generatedFilename,
             originalName: req.file.originalname,
             mimetype: req.file.mimetype,
             size: req.file.size,
-            url: `/uploads/${req.file.filename}`
+            url: `/uploads/${generatedFilename}`
           };
         }
       } else {
         expenseData.receipt = {
-          filename: req.file.filename,
+          filename: generatedFilename,
           originalName: req.file.originalname,
           mimetype: req.file.mimetype,
           size: req.file.size,
-          url: `/uploads/${req.file.filename}`
+          url: `/uploads/${generatedFilename}`
         };
       }
     }
@@ -307,6 +309,7 @@ const updateExpense = async (req, res) => {
       });
 
       if (req.file) {
+        const generatedFilename = req.file.filename || `${uuidv4()}${path.extname(req.file.originalname || '').toLowerCase()}`;
         if (expense.receipt?.publicId) {
           await deleteFromCloudinary(expense.receipt.publicId, expense.receipt.resourceType);
         } else if (expense.receipt?.filename) {
@@ -316,9 +319,9 @@ const updateExpense = async (req, res) => {
 
         if (isCloudinaryConfigured) {
           try {
-            const cloudinaryResult = await uploadToCloudinary(req.file.path, 'expense-tracker');
+            const cloudinaryResult = await uploadToCloudinary(req.file.path || req.file, 'expense-tracker');
             expense.receipt = {
-              filename: req.file.filename,
+              filename: generatedFilename,
               originalName: req.file.originalname,
               mimetype: req.file.mimetype,
               size: req.file.size,
@@ -329,20 +332,20 @@ const updateExpense = async (req, res) => {
           } catch (uploadErr) {
             console.error('Failed to upload to Cloudinary on update, falling back to local:', uploadErr);
             expense.receipt = {
-              filename: req.file.filename,
+              filename: generatedFilename,
               originalName: req.file.originalname,
               mimetype: req.file.mimetype,
               size: req.file.size,
-              url: `/uploads/${req.file.filename}`
+              url: `/uploads/${generatedFilename}`
             };
           }
         } else {
           expense.receipt = {
-            filename: req.file.filename,
+            filename: generatedFilename,
             originalName: req.file.originalname,
             mimetype: req.file.mimetype,
             size: req.file.size,
-            url: `/uploads/${req.file.filename}`
+            url: `/uploads/${generatedFilename}`
           };
         }
       }

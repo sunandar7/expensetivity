@@ -259,8 +259,8 @@ export default function ExpenseForm({ expense, categories, onClose }) {
                   name="amount"
                   type="number"
                   min="0"
-                  step="1"
-                  placeholder="0"
+                  step="any"
+                  placeholder="0.00"
                   value={form.amount}
                   onChange={handleChange}
                   required
@@ -281,7 +281,7 @@ export default function ExpenseForm({ expense, categories, onClose }) {
               </div>
               {form.amount && !isNaN(form.amount) && (
                 <p className="amount-formatted">
-                  {new Intl.NumberFormat('my-MM').format(parseFloat(form.amount))} {
+                  {new Intl.NumberFormat('my-MM', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(parseFloat(form.amount))} {
                     {
                       MMK: 'MMK',
                       USD: 'USD',
@@ -398,7 +398,7 @@ export default function ExpenseForm({ expense, categories, onClose }) {
                   const wId = w._id || w.id;
                   return (
                     <option key={wId} value={wId}>
-                      {w.name} ({new Intl.NumberFormat('my-MM').format(w.balance)} {w.currency})
+                      {w.name} ({new Intl.NumberFormat('my-MM', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(w.balance)} {w.currency})
                     </option>
                   );
                 })}

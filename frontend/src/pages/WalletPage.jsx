@@ -146,11 +146,13 @@ export default function WalletPage() {
   const formatBalance = (amount, currency) => {
     try {
       if (currency === 'MMK') {
-        return new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ' MMK';
+        return new Intl.NumberFormat('my-MM', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount) + ' MMK';
       }
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: currency
+        currency: currency,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
       }).format(amount);
     } catch {
       return `${amount} ${currency}`;

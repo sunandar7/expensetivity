@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import './ExpenseTable.css';
 
 const formatAmount = (amount, currency = 'MMK') =>
-  new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ` ${currency}`;
+  new Intl.NumberFormat('my-MM', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount) + ` ${currency}`;
 
 export default function ExpenseTable({ expenses, onEdit, onDelete }) {
   const { user } = useAuth();

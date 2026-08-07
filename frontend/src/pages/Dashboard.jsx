@@ -13,9 +13,9 @@ const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 export default function Dashboard() {
   const { user } = useAuth();
   const formatMMK = (amount) =>
-    new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ` ${user?.baseCurrency || 'MMK'}`;
+    new Intl.NumberFormat('my-MM', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount) + ` ${user?.baseCurrency || 'MMK'}`;
   const formatAmount = (amount, currency) =>
-    new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ` ${currency || user?.baseCurrency || 'MMK'}`;
+    new Intl.NumberFormat('my-MM', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount) + ` ${currency || user?.baseCurrency || 'MMK'}`;
   const {
     expenses, summary, stats, budget,
     fetchExpenses, fetchCategories, fetchStats, fetchCurrentBudget, loading

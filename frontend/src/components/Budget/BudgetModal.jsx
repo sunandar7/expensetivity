@@ -80,8 +80,8 @@ export default function BudgetModal({ onClose, initialMonth, initialYear, initia
                   name="amount"
                   type="number"
                   min="0"
-                  step="1"
-                  placeholder="e.g. 500000"
+                  step="any"
+                  placeholder="e.g. 500000.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   required
@@ -91,7 +91,7 @@ export default function BudgetModal({ onClose, initialMonth, initialYear, initia
               </div>
               {amount && !isNaN(amount) && (
                 <p className="amount-formatted">
-                  {new Intl.NumberFormat('my-MM').format(parseFloat(amount))} {
+                  {new Intl.NumberFormat('my-MM', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(parseFloat(amount))} {
                     {
                       MMK: 'MMK',
                       USD: 'USD',

@@ -12,7 +12,7 @@ import './ExpensesPage.css';
 export default function ExpensesPage() {
   const { user } = useAuth();
   const formatMMK = (amount) =>
-    new Intl.NumberFormat('my-MM').format(Math.round(amount)) + ` ${user?.baseCurrency || 'MMK'}`;
+    new Intl.NumberFormat('my-MM', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount) + ` ${user?.baseCurrency || 'MMK'}`;
 
   const {
     expenses, categories, pagination, summary, loading,
